@@ -6,10 +6,11 @@ import {
   DialogDescription,
   DialogTrigger,
   DialogClose,
-} from '@/components/ui/dialog/dialog';
-import { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+} from "@/components/ui/dialog/dialog";
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import {  supabase  } from "@/lib/supabase";
+import { toast } from "sonner";
 
 function GoogleIcon() {
   return (
@@ -23,41 +24,43 @@ function GoogleIcon() {
 }
 
 export function SignInDialog() {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
+  const [showPassword, setShowPassword] = useState(false);
   const [isAuthPending, setIsAuthPending] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  const isSignIn = mode === 'signin';
+  const isSignIn = mode === "signin";
 
+  
   const handleSubmit = async () => {
     if (isAuthPending) return;
+
+    if (!email || !password) {
+      toast.error("Email and password are required");
+      return;
+    }
 
     setIsAuthPending(true);
 
     try {
       if (!isSignIn) {
-        const { data, error } = await supabase.auth.signUp(
-          {
-            email,
-            password,
-            options: {
-              data: {
-                username,
-              }
-            }
-          }
-        );
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { username },
+          },
+        });
 
         if (error) throw error;
 
-        if (data) {
-          console.log("Signed up");
-        }
+        toast.success("Account created! Check your email to confirm.");
+        console.log("Signup success", data);
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -66,54 +69,75 @@ export function SignInDialog() {
 
         if (error) throw error;
 
-        if (data) {
-          console.log("Signed in");
-        }
+        toast.success("Logged in successfully");
+        console.log("Signin success", data);
       }
 
       setIsOpen(false);
-    } catch {
-
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      toast.error(error.message || "Authentication failed");
     } finally {
       setIsAuthPending(false);
     }
   };
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger className="inline-flex items-center justify-center bg-gray-950 text-gray-50 h-8 rounded-lg px-3 text-sm w-full">
         Sign in
       </DialogTrigger>
 
-      <DialogContent className='w-full max-w-md bg-white p-6 dark:bg-zinc-900'>
+      <DialogContent className="w-full max-w-md bg-white p-6 dark:bg-zinc-900">
         <DialogHeader>
-          <DialogTitle className='text-zinc-900 dark:text-white'>
-            {isSignIn ? 'Welcome back' : 'Create an account'}
+          <DialogTitle className="text-zinc-900 dark:text-white">
+            {isSignIn ? "Welcome back" : "Create an account"}
           </DialogTitle>
-          <DialogDescription className='text-zinc-600 dark:text-zinc-400'>
+
+          <DialogDescription className="text-zinc-600 dark:text-zinc-400">
             {isSignIn
-              ? 'Login to your account and get started.'
+              ? "Login to your account and get started."
               : "Let's get you signed up and started."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className='mt-6 flex flex-col space-y-4'>
+        <div className="mt-6 flex flex-col space-y-4">
+
+          {/* Google Auth */}
 
           <button
-            type='button'
-            className='inline-flex items-center justify-center gap-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700'
+            type="button"
+            className="inline-flex items-center justify-center gap-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
           >
             <GoogleIcon />
-            {isSignIn ? 'Login with Google' : 'Sign up with Google'}
+            {isSignIn ? "Login with Google" : "Sign up with Google"}
           </button>
 
+          {/* Divider */}
 
-          <div className='flex items-center gap-3'>
-            <div className='flex-1 h-px bg-zinc-200 dark:bg-zinc-700' />
-            <span className='text-sm text-zinc-400'>or</span>
-            <div className='flex-1 h-px bg-zinc-200 dark:bg-zinc-700' />
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
+            <span className="text-sm text-zinc-400">or</span>
+            <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />
           </div>
 
+          {/* Email */}
+
+          <div className="flex flex-col space-y-1.5">
+            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              Email
+            </label>
+
+            <input
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              disabled={isAuthPending}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-hidden focus:ring-2 focus:ring-black/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:ring-white/5"
+            />
+          </div>
+
+          {/* Username (signup only) */}
 
 
           <div className='flex flex-col space-y-1.5'>
@@ -153,65 +177,72 @@ export function SignInDialog() {
             <label htmlFor='password' className='text-sm font-medium text-zinc-700 dark:text-zinc-300'>
               Password
             </label>
-            <div className='relative'>
+
+            <div className="relative">
               <input
-                id='password'
-                type={showPassword ? 'text' : 'password'}
-                placeholder='••••••••'
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
                 value={password}
                 disabled={isAuthPending}
-                onChange={e => setPassword(e.target.value)}
-                className='h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 pr-9 text-sm text-zinc-900 outline-hidden focus:ring-2 focus:ring-black/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:ring-white/5'
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 pr-9 text-sm text-zinc-900 outline-hidden focus:ring-2 focus:ring-black/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:ring-white/5"
               />
+
               <button
-                type='button'
+                type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isAuthPending}
-                className='absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
               >
                 {showPassword ? <Eye size={15} /> : <EyeOff size={15} />}
               </button>
             </div>
           </div>
 
+          {/* Forgot password */}
 
           {isSignIn && (
-            <div className='text-right -mt-2'>
-              <a href='#' className='text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white'>
+            <div className="text-right -mt-2">
+              <a
+                href="#"
+                className="text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+              >
                 Forgot password?
               </a>
             </div>
           )}
 
+          {/* Submit */}
 
           <button
-            type='submit'
+            type="button"
             onClick={handleSubmit}
             disabled={isAuthPending}
-            className='inline-flex items-center justify-center w-full rounded-lg bg-black px-4 py-2 text-sm font-medium text-zinc-50 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100'
+            className="inline-flex items-center justify-center w-full rounded-lg bg-black px-4 py-2 text-sm font-medium text-zinc-50 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
           >
-            {isSignIn ? 'Login' : 'Sign up'}
+            {isSignIn ? "Login" : "Sign up"}
           </button>
 
+          {/* Toggle */}
 
-          <p className='text-center text-sm text-zinc-500 dark:text-zinc-400'>
-            {isSignIn ? "Don't have an account? " : 'Already have an account? '}
+          <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
+            {isSignIn ? "Don't have an account? " : "Already have an account? "}
             <button
-              type='button'
-              onClick={() => setMode(isSignIn ? 'signup' : 'signin')}
+              type="button"
               disabled={isAuthPending}
-              className='font-semibold text-zinc-900 hover:underline dark:text-white'
+              onClick={() => setMode(isSignIn ? "signup" : "signin")}
+              className="font-semibold text-zinc-900 hover:underline dark:text-white"
             >
-              {isSignIn ? 'Sign up' : 'Login'}
+              {isSignIn ? "Sign up" : "Login"}
             </button>
           </p>
 
+          {/* Terms */}
 
-          <p className='text-center text-sm text-zinc-400'>
-            By clicking {isSignIn ? 'login' : 'signing up'}, you agree to our{' '}
-            <a href='#' className='underline hover:text-zinc-600 dark:hover:text-zinc-300'>Terms of Service</a>
-            {' '}and{' '}
-            <a href='#' className='underline hover:text-zinc-600 dark:hover:text-zinc-300'>Privacy Policy</a>
+          <p className="text-center text-sm text-zinc-400">
+            By clicking {isSignIn ? "login" : "signing up"}, you agree to our{" "}
+            <a className="underline">Terms of Service</a> and{" "}
+            <a className="underline">Privacy Policy</a>
           </p>
         </div>
 
