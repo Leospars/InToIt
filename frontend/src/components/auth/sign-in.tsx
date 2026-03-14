@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog/dialog';
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import {supabase} from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 function GoogleIcon() {
   return (
@@ -30,6 +30,7 @@ export function SignInDialog() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [isAuthPending, setIsAuthPending] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const isSignIn = mode === 'signin';
 
@@ -69,6 +70,8 @@ export function SignInDialog() {
           console.log("Signed in");
         }
       }
+
+      setIsOpen(false);
     } catch {
 
     } finally {
@@ -77,7 +80,7 @@ export function SignInDialog() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger className="inline-flex items-center justify-center bg-gray-950 text-gray-50 h-8 rounded-lg px-3 text-sm w-full">
         Sign in
       </DialogTrigger>
@@ -112,37 +115,38 @@ export function SignInDialog() {
           </div>
 
 
+
+          <div className='flex flex-col space-y-1.5'>
+            <label htmlFor='email' className='text-sm font-medium text-zinc-700 dark:text-zinc-300'>
+              Email
+            </label>
+            <input
+              id='email'
+              type='email'
+              placeholder='you@example.com'
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              disabled={isAuthPending}
+              className='h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-hidden focus:ring-2 focus:ring-black/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:ring-white/5'
+            />
+          </div>
+
           {!isSignIn && (
             <div className='flex flex-col space-y-1.5'>
-              <label htmlFor='email' className='text-sm font-medium text-zinc-700 dark:text-zinc-300'>
-                Email
+              <label htmlFor='username' className='text-sm font-medium text-zinc-700 dark:text-zinc-300'>
+                Username
               </label>
               <input
-                id='email'
-                type='email'
-                placeholder='you@example.com'
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                id='username'
+                type='text'
+                placeholder={isSignIn ? 'John Doe' : 'JohnDoe'}
+                value={username}
                 disabled={isAuthPending}
+                onChange={e => setUsername(e.target.value)}
                 className='h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-hidden focus:ring-2 focus:ring-black/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:ring-white/5'
               />
             </div>
           )}
-
-          <div className='flex flex-col space-y-1.5'>
-            <label htmlFor='username' className='text-sm font-medium text-zinc-700 dark:text-zinc-300'>
-              Username
-            </label>
-            <input
-              id='username'
-              type='text'
-              placeholder={isSignIn ? 'John Doe' : 'JohnDoe'}
-              value={username}
-              disabled={isAuthPending}
-              onChange={e => setUsername(e.target.value)}
-              className='h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-hidden focus:ring-2 focus:ring-black/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:ring-white/5'
-            />
-          </div>
 
 
           <div className='flex flex-col space-y-1.5'>
