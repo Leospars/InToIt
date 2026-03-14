@@ -8,11 +8,9 @@ import CourseOutline from "./pages/course-outline";
 import Analytics from "./pages/analytics";
 import Home from "./pages/home";
 
-;
-
 const App = () => {
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-white">
+    <div className="flex flex-col h-screen overflow-hidden bg-[color(display-p3_0.975_0.975_0.975)]">
 
       <Navbar />
 
@@ -20,15 +18,13 @@ const App = () => {
 
         <Sidebar />
 
-        <main className="flex-1 overflow-y-auto ">
+        <main className="flex-1 overflow-y-auto">
           <Routes>
-
             <Route path="/" element={<Home />} />
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/shorts" element={<Shorts />} />
             <Route path="/course-outline" element={<CourseOutline />} />
             <Route path="/analytics" element={<Analytics />} />
-
           </Routes>
         </main>
 

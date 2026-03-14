@@ -122,20 +122,7 @@ export function SignInDialog() {
 
           {/* Email */}
 
-          <div className="flex flex-col space-y-1.5">
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Email
-            </label>
 
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              disabled={isAuthPending}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-hidden focus:ring-2 focus:ring-black/5 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:focus:ring-white/5"
-            />
-          </div>
 
           {/* Username (signup only) */}
 

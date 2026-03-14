@@ -1,7 +1,8 @@
-import React from "react";
 import { NavLink } from "react-router-dom";
 import { SignInDialog } from "./auth/sign-in";
 import { Brain, Clapperboard, BookOpen, BarChart3 } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
+import { UserSettingsDropdown } from "./auth/user-settings";
 
 const linkBase =
   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors";
@@ -13,6 +14,9 @@ const active =
   "bg-gray-200 text-black";
 
 const Sidebar = () => {
+
+  const { user } = useAuth();
+
   return (
     <aside className="hidden md:flex h-full w-56 flex-col border-r border-gray-200">
       <nav className="flex flex-col gap-1 p-3">
@@ -60,8 +64,14 @@ const Sidebar = () => {
       </nav>
 
       <div className="mt-auto border-t border-gray-200 p-3">
-        <SignInDialog />
-      </div>
+  
+  {user ? (
+  <UserSettingsDropdown user={user}/>
+  ) : (
+    <SignInDialog />
+  )}
+</div>
+   
     </aside>
   );
 };
