@@ -1,4 +1,5 @@
 import React from "react";
+import {  SignInDialog } from "./auth/sign-in";
 
 const Sidebar = () => {
   return (
@@ -34,12 +35,7 @@ const Sidebar = () => {
       </nav>
 
       <div className="mt-auto border-t border-gray-200 p-3">
-        <a
-          className="inline-flex items-center justify-center bg-gray-950 text-gray-50 h-8 rounded-lg px-3 text-sm w-full"
-          href="/sign-in"
-        >
-          Sign in
-        </a>
+        <SignInDialog/>
       </div>
     </aside>
   );
