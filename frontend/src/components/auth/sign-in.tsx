@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog/dialog";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import {  supabase  } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 function GoogleIcon() {
@@ -36,7 +36,7 @@ export function SignInDialog() {
 
   const isSignIn = mode === "signin";
 
-  
+
   const handleSubmit = async () => {
     if (isAuthPending) return;
 
@@ -81,6 +81,13 @@ export function SignInDialog() {
       setIsAuthPending(false);
     }
   };
+
+  const loginWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google"
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger className="inline-flex items-center justify-center bg-gray-950 text-gray-50 h-8 rounded-lg px-3 text-sm w-full">
@@ -105,8 +112,9 @@ export function SignInDialog() {
           {/* Google Auth */}
 
           <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700"
+            onClick={loginWithGoogle}
+            type='button'
+            className='inline-flex items-center justify-center gap-2 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white dark:hover:bg-zinc-700'
           >
             <GoogleIcon />
             {isSignIn ? "Login with Google" : "Sign up with Google"}
