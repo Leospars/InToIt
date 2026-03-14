@@ -5,7 +5,7 @@ import * as Tabs from '@radix-ui/react-tabs'
 import * as RadioGroup from '@radix-ui/react-radio-group'
 import { X, Download, Upload, Eye, EyeOff, ChevronDown, Check, AlertTriangle, Wifi, WifiOff } from 'lucide-react'
 import { useStore } from '@/store'
-import { PROVIDER_GROUPS, DEFAULT_PROVIDERS, STT_PROVIDERS, TTS_PROVIDERS } from '@/lib/providers'
+import { PROVIDER_GROUPS, STT_PROVIDERS, TTS_PROVIDERS } from '@/lib/providers'
 import type { LLMProviderId, SearchProviderId } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -322,7 +322,7 @@ export function SettingsSheet() {
                         {!p.requiresKey && <span className="text-[10px] text-green-400 font-medium">FREE</span>}
                         {p.requiresKey && sttConfig.provider === p.id && (
                           <ApiKeyInput
-                            value={(sttConfig as Record<string, string>).apiKey ?? ''}
+                            value={sttConfig.apiKey ?? ''}
                             onChange={v => setSTT({ apiKey: v } as Parameters<typeof setSTT>[0])}
                           />
                         )}
@@ -419,7 +419,7 @@ export function SettingsSheet() {
                     <label className="text-[11px] text-text/50 mb-1 block">{label}</label>
                     <input
                       type="text"
-                      value={(backend as Record<string, string>)[key] ?? ''}
+                      value={(backend as Record<keyof typeof backend, string>)[key as keyof typeof backend] ?? ''}
                       onChange={e => setBackend({ [key]: e.target.value } as Parameters<typeof setBackend>[0])}
                       placeholder={placeholder}
                       className="w-full bg-surface-2 border border-border rounded-lg px-3 py-2 text-xs font-mono text-text/70 focus:outline-none focus:border-cyan/30"
@@ -445,6 +445,3 @@ function getKeyPlaceholder(id: LLMProviderId): string {
   return map[id] ?? 'your-api-key'
 }
 
-function cn(...classes: (string | undefined | false)[]): string {
-  return classes.filter(Boolean).join(' ')
-}

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, Zap, RotateCcw, ChevronRight, Layers, Clock, Star } from 'lucide-react'
 import { useStore } from '@/store'
 import { callLLMJson } from '@/lib/llmClient'
 import { sm2Update, shuffle, cn } from '@/lib/utils'
-import type { FlashCard, CardType } from '@/types'
-import { idb } from '@/lib/idb'
+import type { FlashCard, CardType, LLMProviderConfig } from '@/types'
+
 
 // ─── Card type metadata ───────────────────────────────────
 const CARD_TYPES: Record<CardType, { label: string; color: string; icon: string; desc: string }> = {
@@ -26,7 +26,7 @@ const GRADES = [
 
 // ─── Card Generator ───────────────────────────────────────
 async function generateCard(
-  provider: ReturnType<typeof useStore>['providers'][string],
+  provider: LLMProviderConfig,
   concept: string,
   type: CardType,
 ): Promise<FlashCard> {
@@ -67,12 +67,10 @@ The front should be a crisp question or prompt. The back should be a clear, memo
 // ─── Single Card Face ─────────────────────────────────────
 function CardFace({
   card,
-  face,
   flipped,
   onFlip,
 }: {
   card: FlashCard
-  face: 'front' | 'back'
   flipped: boolean
   onFlip: () => void
 }) {
@@ -387,7 +385,6 @@ export function FlashCards() {
           >
             <CardFace
               card={currentCard}
-              face="front"
               flipped={flipped}
               onFlip={() => setFlipped(f => !f)}
             />
@@ -432,5 +429,3 @@ export function FlashCards() {
   )
 }
 
-// Stub for idb import — real implementation uses 'idb' package
-const idb = { get: async (_: string) => null, set: async (_: string, __: unknown) => {} }

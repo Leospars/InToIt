@@ -6,10 +6,7 @@
 
 ## Quick Start
 
-```bash
-# Clone
-git clone https://github.com/your-org/intoit-learning
-cd intoit-learning
+
 
 # Frontend
 cd frontend

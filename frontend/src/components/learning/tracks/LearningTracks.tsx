@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   BookOpen, Cpu, Radio, Wrench, Zap, FlaskConical,
   ChevronLeft, Check, Lock, Star,
