@@ -1,0 +1,20 @@
+{
+  "routes": [
+    { "route": "/api/*", "allowedRoles": ["anonymous"] },
+    { "route": "/*", "serve": "/index.html", "statusCode": 200 }
+  ],
+  "responseOverrides": {
+    "404": { "rewrite": "/index.html", "statusCode": 200 }
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "microphone=(self), camera=()"
+  },
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json",
+    ".wasm": "application/wasm"
+  },
+  "platform": { "apiRuntime": "python:3.12" },
+  "trailingSlash": "Never"
+}
