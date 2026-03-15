@@ -104,11 +104,15 @@ Make the queries specific and relevant to what the user is asking for."""
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-@router.post("/shorts/search")
-async def search_shorts(req: RecommendRequest):
+@router.get("/shorts/search")
+async def search_shorts(q: str, max_results: int = 10):
     """
     Search YouTube Shorts with Gemini AI processing.
     Uses Gemini to enhance the search query and filter for shorts.
+    
+    Args:
+        q: Search query string
+        max_results: Maximum number of shorts to return (default: 10)
     """
     if not gemini_model:
         raise HTTPException(
@@ -124,7 +128,7 @@ async def search_shorts(req: RecommendRequest):
     
     try:
         # Use Gemini to enhance the search query for shorts
-        gemini_prompt = f"""The user wants to find YouTube Shorts about: "{req.prompt}"
+        gemini_prompt = f"""The user wants to find YouTube Shorts about: "{q}"
 
 Generate 2-3 specific YouTube Shorts search queries. Focus on:
 - Short-form content (TikTok-style, under 60 seconds)
@@ -140,11 +144,11 @@ Return ONLY a JSON array of search query strings:
         try:
             search_queries = json.loads(response_text)
         except json.JSONDecodeError:
-            search_queries = [f"{req.prompt} shorts"]
+            search_queries = [f"{q} shorts"]
         
         # Search for shorts (videos under 60 seconds)
         all_shorts = []
-        videos_per_query = max(1, req.max_results // len(search_queries))
+        videos_per_query = max(1, max_results // len(search_queries))
         
         async with httpx.AsyncClient() as client:
             for query in search_queries:
@@ -173,22 +177,31 @@ Return ONLY a JSON array of search query strings:
                             "channel": item.get("snippet", {}).get("channelTitle"),
                         })
                 
-                if len(all_shorts) >= req.max_results:
+                if len(all_shorts) >= max_results:
                     break
         
         return {
-            "shorts": all_shorts[:req.max_results],
+            "shorts": all_shorts[:max_results],
             "ai_queries": search_queries,
-            "search_term": req.prompt,
+            "search_term": q,
             "total_found": len(all_shorts)
         }
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
-@router.get("/search")
-async def search_videos(query: str, max_results: int = 4):
-    """Search YouTube for videos matching a query"""
+@router.post("/recommend")
+async def recommend_videos(req: RecommendRequest):
+    """
+    Use Google Gemini AI to generate video recommendations from a user prompt.
+    AI generates search queries based on the user's intent.
+    """
+    if not gemini_model:
+        raise HTTPException(
+            status_code=400,
+            detail="Google Gemini API key not configured"
+        )
+    
     if not settings.youtube_api_key:
         raise HTTPException(
             status_code=400,
@@ -196,10 +209,10 @@ async def search_videos(query: str, max_results: int = 4):
         )
     
     try:
-        async with httpx.AsyncClient() as client:
-            params = {
-                "part": "snippet",
-                "q": query,
+        # Use Gemini to generate video search queries based on user prompt
+        prompt_text = f"""Based on this user request, generate 2-3 YouTube search queries to find relevant videos.
+                    
+User request: "{req.prompt}"
                 "type": "video",
                 "maxResults": max_results,
                 "key": settings.youtube_api_key,

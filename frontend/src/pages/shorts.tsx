@@ -86,11 +86,12 @@ const Shorts = () => {
     setLastSearch(query);
 
     try {
-      const response = await fetch("/api/videos/shorts/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: query, max_results: 10 }),
+      const params = new URLSearchParams({
+        q: query,
+        max_results: "10"
       });
+      
+      const response = await fetch(`/api/videos/shorts/search?${params}`);
 
       if (!response.ok) {
         const errorData = await response.json();
