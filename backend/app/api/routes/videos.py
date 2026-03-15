@@ -104,6 +104,88 @@ Make the queries specific and relevant to what the user is asking for."""
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
+@router.post("/shorts/search")
+async def search_shorts(req: RecommendRequest):
+    """
+    Search YouTube Shorts with Gemini AI processing.
+    Uses Gemini to enhance the search query and filter for shorts.
+    """
+    if not gemini_model:
+        raise HTTPException(
+            status_code=400,
+            detail="Google Gemini API key not configured"
+        )
+    
+    if not settings.youtube_api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="YouTube API key not configured"
+        )
+    
+    try:
+        # Use Gemini to enhance the search query for shorts
+        gemini_prompt = f"""The user wants to find YouTube Shorts about: "{req.prompt}"
+
+Generate 2-3 specific YouTube Shorts search queries. Focus on:
+- Short-form content (TikTok-style, under 60 seconds)
+- Educational or entertaining shorts
+- Relevant to the topic
+
+Return ONLY a JSON array of search query strings:
+["query1", "query2", "query3"]"""
+        
+        response = gemini_model.generate_content(gemini_prompt)
+        response_text = response.text
+        
+        try:
+            search_queries = json.loads(response_text)
+        except json.JSONDecodeError:
+            search_queries = [f"{req.prompt} shorts"]
+        
+        # Search for shorts (videos under 60 seconds)
+        all_shorts = []
+        videos_per_query = max(1, req.max_results // len(search_queries))
+        
+        async with httpx.AsyncClient() as client:
+            for query in search_queries:
+                params = {
+                    "part": "snippet",
+                    "q": query,
+                    "type": "video",
+                    "videoDuration": "short",  # Videos under 4 minutes (close to shorts)
+                    "maxResults": videos_per_query * 2,  # Get extra to filter
+                    "key": settings.youtube_api_key,
+                    "order": "relevance",
+                }
+                response = await client.get(f"{YOUTUBE_API_URL}/search", params=params)
+                response.raise_for_status()
+                
+                data = response.json()
+                for item in data.get("items", []):
+                    video_id = item.get("id", {}).get("videoId")
+                    if video_id:
+                        all_shorts.append({
+                            "id": video_id,
+                            "title": item.get("snippet", {}).get("title"),
+                            "description": item.get("snippet", {}).get("description"),
+                            "thumbnail": item.get("snippet", {}).get("thumbnails", {}).get("medium", {}).get("url"),
+                            "embed_url": f"https://www.youtube.com/embed/{video_id}",
+                            "channel": item.get("snippet", {}).get("channelTitle"),
+                        })
+                
+                if len(all_shorts) >= req.max_results:
+                    break
+        
+        return {
+            "shorts": all_shorts[:req.max_results],
+            "ai_queries": search_queries,
+            "search_term": req.prompt,
+            "total_found": len(all_shorts)
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
 @router.get("/search")
 async def search_videos(query: str, max_results: int = 4):
     """Search YouTube for videos matching a query"""
