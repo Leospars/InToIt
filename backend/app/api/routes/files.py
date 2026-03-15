@@ -349,7 +349,7 @@ async def upload_file(
     
     # Generate unique file ID and storage path
     file_id = str(uuid.uuid4())
-    storage_path = f"courses/{course_id}/{file_id}/{file.filename}"
+    storage_path = f"courses/{course_id}/{file.filename}"
     
     # Extract content if requested and file type supports it
     extracted_content = None

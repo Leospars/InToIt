@@ -4,11 +4,13 @@ import Navbar from "./components/navbar";
 import Sidebar from "./components/sidebar";
 
 import Analytics from "./pages/analytics";
+import Cortex from "./pages/cortex";
 import CourseOutline from "./pages/course-outline";
 import Home from "./pages/home";
 import { RootChat } from "./pages/live-chat";
 import Quiz from "./pages/quiz";
 import Shorts from "./pages/shorts";
+import Synapse from "./pages/synapse";
 import TopicPage from "./pages/topics";
 import Upload from "./pages/upload";
 import { useAuth } from "./context/auth-context";
@@ -35,6 +37,8 @@ const App = () => {
             <Route path="/course-outline" element={<CourseOutline />} />
             <Route path="/analytics" element={user ? <Analytics userId={user.id} /> : null} />
             <Route path="/live-chat" element={<RootChat />} />
+            <Route path="/cortex" element={<Cortex />} />
+            <Route path="/synapse" element={<Synapse />} />
 <Route path="/upload" element={<Upload />} />
             <Route
               path="/course/:courseId/topic/:topicId"
