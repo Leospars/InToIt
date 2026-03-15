@@ -1,3 +1,4 @@
+import { CommandMenu } from "./ui/command-menu/command-menu";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/lib/supabase";
 
@@ -45,11 +46,14 @@ const Navbar = () => {
             </button>
 
 
+            <CommandMenu />
+          </div>
+
 
           </div>
       }
 
-    </header>
+    </header >
   );
 };
 

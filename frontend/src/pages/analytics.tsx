@@ -12,7 +12,7 @@ import {
   Legend,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from "recharts";
 
 import {
@@ -24,10 +24,8 @@ import {
   Users,
   ClipboardList,
   CheckCircle,
-  Award
+  Award,
 } from "lucide-react";
-
-
 
 const completionData = [
   { day: "Mon", completion: 20 },
@@ -36,21 +34,21 @@ const completionData = [
   { day: "Thu", completion: 55 },
   { day: "Fri", completion: 61 },
   { day: "Sat", completion: 70 },
-  { day: "Sun", completion: 78 }
+  { day: "Sun", completion: 78 },
 ];
 
 const accuracyData = [
   { name: "Quiz 1", correct: 120, wrong: 40 },
   { name: "Quiz 2", correct: 98, wrong: 60 },
   { name: "Quiz 3", correct: 86, wrong: 70 },
-  { name: "Quiz 4", correct: 150, wrong: 30 }
+  { name: "Quiz 4", correct: 150, wrong: 30 },
 ];
 
 const topicDifficulty = [
   { topic: "Binary Math", incorrect: 42 },
   { topic: "Recurrence", incorrect: 38 },
   { topic: "CPU Architecture", incorrect: 29 },
-  { topic: "Logic Gates", incorrect: 14 }
+  { topic: "Logic Gates", incorrect: 14 },
 ];
 
 const activityData = [
@@ -59,7 +57,7 @@ const activityData = [
   { time: "11AM", attempts: 60 },
   { time: "12PM", attempts: 72 },
   { time: "1PM", attempts: 55 },
-  { time: "2PM", attempts: 80 }
+  { time: "2PM", attempts: 80 },
 ];
 
 const scoreDistribution = [
@@ -67,12 +65,10 @@ const scoreDistribution = [
   { name: "B", value: 28 },
   { name: "C", value: 20 },
   { name: "D", value: 12 },
-  { name: "F", value: 6 }
+  { name: "F", value: 6 },
 ];
 
 const COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#f97316", "#ef4444"];
-
-
 
 const ChartContainer = ({ children }: { children: React.ReactNode }) => (
   <div className="w-full aspect-[16/9]">
@@ -82,11 +78,10 @@ const ChartContainer = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-
 const StatCard = ({
   icon: Icon,
   label,
-  value
+  value,
 }: {
   icon: any;
   label: string;
@@ -104,65 +99,35 @@ const StatCard = ({
   </div>
 );
 
-/* ---------------- Component ---------------- */
-
 const Analytics = () => {
   return (
-    <div className="max-w-7xl mx-auto flex flex-col gap-8 py-10">
+    <div className="max-w-5xl mx-auto flex flex-col gap-8 py-10">
+      <div className="border-b pb-6 flex flex-col gap-4 ">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white shadow">
+          <BarChart3 size={18} className="text-gray-500" />
+        </div>
 
-      
-
-      <div className="border-b pb-6">
-        <h2 className="text-2xl font-semibold tracking-tight">
-          Analytics
-        </h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Analytics</h2>
         <p className="text-gray-600">
           Monitor engagement, track performance, and analyze learning outcomes.
         </p>
       </div>
 
-     
-
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <StatCard icon={Users} label="Total Users" value="12,431" />
 
-        <StatCard
-          icon={Users}
-          label="Total Users"
-          value="12,431"
-        />
+        <StatCard icon={ClipboardList} label="Quiz Attempts" value="4,210" />
 
-        <StatCard
-          icon={ClipboardList}
-          label="Quiz Attempts"
-          value="4,210"
-        />
+        <StatCard icon={CheckCircle} label="Completion Rate" value="78%" />
 
-        <StatCard
-          icon={CheckCircle}
-          label="Completion Rate"
-          value="78%"
-        />
-
-        <StatCard
-          icon={Award}
-          label="Average Score"
-          value="84%"
-        />
-
+        <StatCard icon={Award} label="Average Score" value="84%" />
       </div>
 
-      
-
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-
-       
-
         <div className="col-span-2 border rounded-xl p-6 bg-white shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp size={18} />
-            <h3 className="font-semibold">
-              Course Completion Trend
-            </h3>
+            <h3 className="font-semibold">Course Completion Trend</h3>
           </div>
 
           <ChartContainer>
@@ -181,14 +146,10 @@ const Analytics = () => {
           </ChartContainer>
         </div>
 
-
-
         <div className="col-span-2 border rounded-xl p-6 bg-white shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 size={18} />
-            <h3 className="font-semibold">
-              Answer Accuracy
-            </h3>
+            <h3 className="font-semibold">Answer Accuracy</h3>
           </div>
 
           <ChartContainer>
@@ -204,14 +165,10 @@ const Analytics = () => {
           </ChartContainer>
         </div>
 
-     
-
         <div className="col-span-2 border rounded-xl p-6 bg-white shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <BookOpen size={18} />
-            <h3 className="font-semibold">
-              Topics Students Struggle With
-            </h3>
+            <h3 className="font-semibold">Topics Students Struggle With</h3>
           </div>
 
           <ChartContainer>
@@ -225,14 +182,10 @@ const Analytics = () => {
           </ChartContainer>
         </div>
 
-   
-
         <div className="col-span-2 border rounded-xl p-6 bg-white shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Activity size={18} />
-            <h3 className="font-semibold">
-              Quiz Activity Today
-            </h3>
+            <h3 className="font-semibold">Quiz Activity Today</h3>
           </div>
 
           <ChartContainer>
@@ -251,14 +204,10 @@ const Analytics = () => {
           </ChartContainer>
         </div>
 
-       
-
         <div className="col-span-2 border rounded-xl p-6 bg-white shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <PieIcon size={18} />
-            <h3 className="font-semibold">
-              Score Distribution
-            </h3>
+            <h3 className="font-semibold">Score Distribution</h3>
           </div>
 
           <ChartContainer>
@@ -277,7 +226,6 @@ const Analytics = () => {
             </PieChart>
           </ChartContainer>
         </div>
-
       </div>
     </div>
   );

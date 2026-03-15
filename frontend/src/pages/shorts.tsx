@@ -26,7 +26,7 @@ const VideoSlide = ({ src }: { src: string }) => {
         style={{
           height: "calc(100% - 100px)",
           aspectRatio: "9 / 16",
-          borderRadius: 16,
+          borderRadius: 32,
           overflow: "hidden",
           position: "relative",
           background: "#111",
