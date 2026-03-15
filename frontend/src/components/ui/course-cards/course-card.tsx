@@ -15,8 +15,9 @@ import { useAuth } from '@/context/auth-context';
 import { Tables } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Cpu, BookOpen, Calculator, Globe } from 'lucide-react';
+import { Cpu, } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
+import { CourseCardSkeleton } from '../skeleton-loaders/course-skeleton';
 
 type Course = Tables<"courses">;
 
@@ -195,7 +196,7 @@ function CourseDialog({ course }: { course: Course; }) {
 export function CoursesList() {
   const { user } = useAuth();
 
-  const { data: courses } = useQuery({
+  const { data: courses, isLoading } = useQuery({
     queryKey: ["courses", user?.id],
     enabled: !!user,
     queryFn: async () => {
@@ -212,9 +213,17 @@ export function CoursesList() {
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-      {courses?.map((course) => (
-        <CourseDialog key={course.id} course={course} />
-      ))}
+
+      {isLoading &&
+        Array.from({ length: 6 }).map((_, i) => (
+          <CourseCardSkeleton key={i} />
+        ))}
+
+      {!isLoading &&
+        courses?.map((course) => (
+          <CourseDialog key={course.id} course={course} />
+        ))}
+
     </div>
   );
 }
