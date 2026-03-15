@@ -2,7 +2,7 @@
 'use client';
 import { AnimatePresence, motion, Transition, Variants } from 'framer-motion';
 import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/cn';
 import { useId } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';

@@ -18,7 +18,7 @@ import {
   MotionStyle,
 } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/cn';
 import { XIcon } from 'lucide-react';
 import useClickOutside from '@/hooks/useClickOutside';
 
