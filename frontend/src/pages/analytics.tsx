@@ -16,15 +16,9 @@ import {
 } from "recharts";
 
 import {
-  TrendingUp,
-  BarChart3,
-  Activity,
-  BookOpen,
-  PieChart as PieIcon,
-  Users,
+
   ClipboardList,
   CheckCircle,
-  Award,
   Flame,
   Zap,
   Clock,
