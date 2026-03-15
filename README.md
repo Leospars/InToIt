@@ -25,6 +25,125 @@ Open the app → **Settings (⚙)** → **LLM Providers** → paste your API key
 
 ---
 
+## Backend Architecture & Course Structure
+
+### Database Schema: Courses > Modules > Topics
+
+The backend implements a hierarchical learning structure using PostgreSQL via Supabase:
+
+```
+Courses (parent container)
+├── Modules (ordered sections)
+│   ├── Topics (individual learning units)
+│   ├── Topics (individual learning units)
+│   └── Topics (individual learning units)
+├── Modules (ordered sections)
+│   └── Topics (individual learning units)
+└── Modules (ordered sections)
+    └── Topics (individual learning units)
+```
+
+#### Core Tables
+
+**`courses`**
+- `course_id`: Unique identifier (e.g., "cpp-fundamentals")
+- `name`: Display name (e.g., "C++ Fundamentals")
+- `description`: Course overview
+- `total_modules`: Number of modules in course
+- `estimated_time_minutes`: Total completion time
+
+**`course_modules`**
+- `course_id`: Links to parent course
+- `module_id`: Unique module identifier (e.g., "memory-management")
+- `name`: Module display name (e.g., "Memory Management")
+- `order_index`: Sequential ordering within course
+- `topics`: Array of topic IDs included in module
+- `estimated_time_minutes`: Module completion time
+
+**`topics`**
+- `topic_id`: Unique identifier (e.g., "heaps-pointers")
+- `name`: Topic name (e.g., "Heaps, Pointers, Linked Lists")
+- `category`: Learning category (e.g., "memory", "data-types")
+- `difficulty_level`: beginner/intermediate/advanced
+- `prerequisites`: Array of required topic IDs
+- `estimated_time_minutes`: Topic completion time
+
+#### Example: C++ Course Structure
+
+```sql
+-- Course: C++ Fundamentals
+INSERT INTO courses (course_id, name, description, total_modules)
+VALUES ('cpp-fundamentals', 'C++ Fundamentals', 'Complete C++ programming course', 4);
+
+-- Module 1: Memory Management
+INSERT INTO course_modules (course_id, module_id, name, order_index, topics)
+VALUES ('cpp-fundamentals', 'memory-management', 'Memory Management', 1, 
+        ARRAY['memory-basics', 'heaps-pointers', 'linked-lists']);
+
+-- Module 2: Data Types
+INSERT INTO course_modules (course_id, module_id, name, order_index, topics)
+VALUES ('cpp-fundamentals', 'data-types', 'Data Types', 2,
+        ARRAY['primitive-types', 'user-defined-types', 'type-conversion']);
+
+-- Topics within Memory Management module
+INSERT INTO topics (topic_id, name, category, difficulty_level)
+VALUES 
+  ('memory-basics', 'Memory Basics', 'memory', 'beginner'),
+  ('heaps-pointers', 'Heaps, Pointers, Linked Lists', 'memory', 'intermediate'),
+  ('linked-lists', 'Linked Lists Implementation', 'data-structures', 'intermediate');
+```
+
+### Progress Tracking API
+
+**Endpoint**: `/api/progress/report`
+
+**Pydantic Models**:
+- `ProgressReport`: Complete user progress overview
+- `CourseProgress`: Per-course completion with progress bars
+- `TopicProgress`: Individual topic completion status
+- `StrugglingArea`: Topics needing extra attention
+
+**Response Structure**:
+```json
+{
+  "course_progress": [
+    {
+      "course_id": "cpp-fundamentals",
+      "course_name": "C++ Fundamentals",
+      "total_modules": 4,
+      "completed_modules": 2,
+      "completion_percentage": 50.0,
+      "progress_bar_segments": [
+        {"module": "memory-management", "completed": true, "percentage": 100},
+        {"module": "data-types", "completed": false, "percentage": 60}
+      ]
+    }
+  ],
+  "topic_progress": [
+    {
+      "topic_id": "heaps-pointers",
+      "topic_name": "Heaps, Pointers, Linked Lists",
+      "category": "memory",
+      "completed": false,
+      "completion_percentage": 75.0,
+      "difficulty_level": "intermediate"
+    }
+  ]
+}
+```
+
+### File Storage Integration
+
+**Endpoint**: `/api/files/upload`
+
+Courses support file attachments via Supabase Storage:
+- PDFs, videos, code samples, documentation
+- Automatic content extraction for searchable text
+- Organized storage: `courses/{course_id}/{file_id}/{filename}`
+- File metadata tracking in `course_files` table
+
+---
+
 ## Architecture
 
 ```
