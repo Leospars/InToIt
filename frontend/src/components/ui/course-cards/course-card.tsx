@@ -11,93 +11,16 @@ import {
 } from '@/components/ui/dialog/morphing-dialog';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/context/auth-context';
+import { Tables } from '@/lib/database.types';
+import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 import { Cpu, BookOpen, Calculator, Globe } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 
-type Topic = {
-  title: string;
-  progress: number;
-};
+type Course = Tables<"courses">;
 
-type Course = {
-  code: string;
-  name: string;
-  lecturer: string;
-  description: string;
-  icon: React.ElementType;
-  progress: number;
-  topics: Topic[];
-};
-
-const COURSES: Course[] = [
-  {
-    code: 'COMP2140',
-    name: 'Computer Architecture',
-    lecturer: 'Dr. Thompson',
-    description:
-      'Learn how processors work including instruction cycles, ALUs, control units, and memory hierarchy.',
-    icon: Cpu,
-    progress: 65,
-    topics: [
-      { title: 'CPU Architecture', progress: 100 },
-      { title: 'Instruction Cycle', progress: 90 },
-      { title: 'Registers and Buses', progress: 80 },
-      { title: 'ALU Operations', progress: 60 },
-      { title: 'Control Units', progress: 40 },
-      { title: 'Memory Hierarchy', progress: 20 },
-    ],
-  },
-  {
-    code: 'COMP2190',
-    name: 'Algorithms & Data Structures',
-    lecturer: 'Dr. Blake',
-    description:
-      'Explore algorithm analysis, recurrence relations, sorting algorithms, and graph theory.',
-    icon: BookOpen,
-    progress: 45,
-    topics: [
-      { title: 'Recurrence Relations', progress: 80 },
-      { title: 'Master Theorem', progress: 70 },
-      { title: 'Sorting Algorithms', progress: 40 },
-      { title: 'Graph Algorithms', progress: 20 },
-      { title: 'Dynamic Programming', progress: 10 },
-    ],
-  },
-  {
-    code: 'ECON2001',
-    name: 'Intermediate Microeconomics',
-    lecturer: 'Dr. Campbell',
-    description:
-      'Study consumer behavior, firm production, market equilibrium and monopoly pricing.',
-    icon: Calculator,
-    progress: 30,
-    topics: [
-      { title: 'Consumer Theory', progress: 70 },
-      { title: 'Utility Maximization', progress: 60 },
-      { title: 'Production Functions', progress: 30 },
-      { title: 'Cost Curves', progress: 20 },
-      { title: 'Market Equilibrium', progress: 10 },
-    ],
-  },
-  {
-    code: 'GEOG1100',
-    name: 'Geography of the Caribbean',
-    lecturer: 'Dr. Lewis',
-    description:
-      'Analyze climate systems, population distribution, and economic development across the Caribbean.',
-    icon: Globe,
-    progress: 55,
-    topics: [
-      { title: 'Physical Geography', progress: 90 },
-      { title: 'Climate Systems', progress: 70 },
-      { title: 'Population Distribution', progress: 50 },
-      { title: 'Urban Development', progress: 30 },
-      { title: 'Regional Trade', progress: 20 },
-    ],
-  },
-];
-
-function ProgressBar({ value }: { value: number }) {
+function ProgressBar({ value }: { value: number; }) {
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-200">
       <div
@@ -108,21 +31,37 @@ function ProgressBar({ value }: { value: number }) {
   );
 }
 
-function TopicsList({ course }: { course: Course }) {
+function TopicsList({ course }: { course: Course; }) {
   const navigate = useNavigate();
   const { setIsOpen } = useMorphingDialog();
+  const { user } = useAuth();
+
+  const { data: courseTopics } = useQuery({
+    queryKey: ["courses", user?.id, "topics"],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("course_modules")
+        .select()
+        .eq("course_id", course.course_id);
+
+      if (error) throw error;
+
+      return data;
+    }
+  });
 
   return (
     <div className="space-y-3">
-      {course.topics.map((topic) => (
+      {courseTopics?.map((topic) => (
         <button
-          key={topic.title}
+          key={topic.name}
           onClick={() => {
             setIsOpen(false);
 
             setTimeout(() => {
               navigate(
-                `/course/${course.code}/topic/${topic.title
+                `/course/${course.course_id}/topic/${topic.name
                   .toLowerCase()
                   .replace(/\s+/g, "-")}`
               );
@@ -132,23 +71,23 @@ function TopicsList({ course }: { course: Course }) {
         >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm font-medium text-zinc-800">
-              {topic.title}
+              {topic.name}
             </span>
 
             <span className="text-sm text-zinc-500">
-              {topic.progress}%
+              {0}%
             </span>
           </div>
 
-          <ProgressBar value={topic.progress} />
+          <ProgressBar value={0} />
         </button>
       ))}
     </div>
   );
 }
 
-function CourseDialog({ course }: { course: Course }) {
-  const Icon = course.icon;
+function CourseDialog({ course }: { course: Course; }) {
+  const Icon = Cpu;
 
   return (
     <MorphingDialog
@@ -175,7 +114,7 @@ function CourseDialog({ course }: { course: Course }) {
               </MorphingDialogTitle>
 
               <MorphingDialogSubtitle className="text-sm text-zinc-500">
-                {course.code}
+                {course.course_id}
               </MorphingDialogSubtitle>
             </div>
 
@@ -188,10 +127,10 @@ function CourseDialog({ course }: { course: Course }) {
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm text-zinc-500">
               <span>Progress</span>
-              <span>{course.progress}%</span>
+              <span>{0}%</span>
             </div>
 
-            <ProgressBar value={course.progress} />
+            <ProgressBar value={0} />
           </div>
         </div>
       </MorphingDialogTrigger>
@@ -215,7 +154,7 @@ function CourseDialog({ course }: { course: Course }) {
                   </MorphingDialogTitle>
 
                   <MorphingDialogSubtitle className="text-sm text-zinc-500">
-                    {course.code} · {course.lecturer}
+                    {course.course_id} ·
                   </MorphingDialogSubtitle>
                 </div>
               </div>
@@ -227,10 +166,10 @@ function CourseDialog({ course }: { course: Course }) {
               <div>
                 <div className="flex justify-between text-sm font-medium">
                   <span>Course Progress</span>
-                  <span>{course.progress}%</span>
+                  <span>{0}%</span>
                 </div>
 
-                <ProgressBar value={course.progress} />
+                <ProgressBar value={0} />
               </div>
 
               <div className="space-y-3">
@@ -254,10 +193,27 @@ function CourseDialog({ course }: { course: Course }) {
 }
 
 export function CoursesList() {
+  const { user } = useAuth();
+
+  const { data: courses } = useQuery({
+    queryKey: ["courses", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("courses")
+        .select()
+        .eq("creatorId", user!.id);
+
+      if (error) throw error;
+
+      return data;
+    }
+  });
+
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-      {COURSES.map((course) => (
-        <CourseDialog key={course.code} course={course} />
+      {courses?.map((course) => (
+        <CourseDialog key={course.id} course={course} />
       ))}
     </div>
   );
