@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   AccordionContent,
-} from "@/components/accordion/accordion";
+} from "@/components/ui/accordion/accordion";
 
 const linkBase =
   "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors";
