@@ -2,14 +2,18 @@ import BottomBar from "@/components/bottom-navbar";
 import { PlusCircle, UploadCloud, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/context/auth-context";
 
 type UploadFile = {
   id: string;
   file: File;
-  progress: number;
+  progress: number | null;
 };
 
+const API_URL = "https://intoit-rqhi.onrender.com";
+
 const Upload = () => {
+  const { session } = useAuth();
   const [files, setFiles] = useState<UploadFile[]>([]);
 
   const handleFiles = (fileList: FileList | null) => {
@@ -18,31 +22,10 @@ const Upload = () => {
     const newFiles = Array.from(fileList).map((file) => ({
       id: crypto.randomUUID(),
       file,
-      progress: 0,
+      progress: null, 
     }));
 
     setFiles((prev) => [...prev, ...newFiles]);
-
-    newFiles.forEach((f) => simulateUpload(f.id));
-  };
-
-  const simulateUpload = (id: string) => {
-    let progress = 0;
-
-    const interval = setInterval(() => {
-      progress += Math.random() * 18;
-
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-      }
-
-      setFiles((prev) =>
-        prev.map((f) =>
-          f.id === id ? { ...f, progress: Math.round(progress) } : f
-        )
-      );
-    }, 250);
   };
 
   const removeFile = (id: string) => {
@@ -53,10 +36,79 @@ const Upload = () => {
     return `${(size / 1024).toFixed(0)} KB`;
   };
 
+  const generateCourseId = (filename: string) => {
+    return filename
+      .toLowerCase()
+      .replace(/\.[^/.]+$/, "")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+  };
+const uploadFiles = () => {
+  if (!session?.access_token) {
+    console.error("Missing auth token");
+    return;
+  }
+
+  files.forEach((item) => {
+    // START progress immediately
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.id === item.id ? { ...f, progress: 0 } : f
+      )
+    );
+
+    const courseId = generateCourseId(item.file.name);
+
+    const form = new FormData();
+    form.append("course_id", courseId);
+    form.append("file", item.file);
+    form.append("extract_content", "true");
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.open("POST", `${API_URL}/api/files/upload`);
+
+    xhr.setRequestHeader(
+      "Authorization",
+      `Bearer ${session.access_token}`
+    );
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id ? { ...f, progress: percent } : f
+          )
+        );
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === item.id ? { ...f, progress: 100 } : f
+          )
+        );
+      } else {
+        console.error("Upload failed", xhr.responseText);
+      }
+    };
+
+    xhr.onerror = () => {
+      console.error("Upload error");
+    };
+
+    xhr.send(form);
+  });
+};
+
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-8 py-10 pb-28">
 
-    
+   
       <div className="flex flex-col gap-4 border-b pb-6">
         <div className="flex size-8 items-center justify-center rounded-lg bg-white shadow">
           <PlusCircle size={18} className="text-gray-500" />
@@ -73,7 +125,7 @@ const Upload = () => {
         </div>
       </div>
 
-
+     
       <label
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -100,14 +152,14 @@ const Upload = () => {
         />
       </label>
 
-
+   
       {files.length > 0 && (
         <div className="mx-auto w-full max-w-3xl flex flex-col gap-3">
           <AnimatePresence>
             {files.map((item) => (
               <motion.div
                 key={item.id}
-                layout
+                layout="position"
                 initial={{ opacity: 0, y: -12, height: 0 }}
                 animate={{ opacity: 1, y: 0, height: "auto" }}
                 exit={{ opacity: 0, y: -12, height: 0 }}
@@ -117,12 +169,13 @@ const Upload = () => {
                 }}
                 className="flex items-center gap-4 rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 overflow-hidden"
               >
-           
+
+               
                 <div className="flex items-center justify-center size-10 rounded-lg bg-gray-200 text-gray-700 text-xs font-semibold">
                   {item.file.name.split(".").pop()?.toUpperCase()}
                 </div>
 
-            
+              
                 <div className="flex flex-col flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm text-gray-900">
@@ -134,44 +187,55 @@ const Upload = () => {
                     </span>
                   </div>
 
-       
-                  <div className="mt-2 h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gray-700 rounded-full"
-                      animate={{ width: `${item.progress}%` }}
-                      transition={{ duration: 0.25 }}
-                    />
-                  </div>
+                  
+                  {item.progress !== null && (
+                    <div className="mt-2 h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gray-700 rounded-full"
+                        initial={false}
+                        animate={{ width: `${item.progress}%` }}
+                        transition={{ duration: 0.2 }}
+                      />
+                    </div>
+                  )}
                 </div>
 
-          
-                <span className="text-sm font-semibold text-gray-700">
-                  {item.progress}%
-                </span>
+         
+                {item.progress !== null && (
+                  <span className="text-sm font-semibold text-gray-700">
+                    {item.progress}%
+                  </span>
+                )}
 
+      
                 <button
                   onClick={() => removeFile(item.id)}
                   className="text-gray-400 hover:text-red-500 transition"
                 >
                   <Trash2 size={18} />
                 </button>
+
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
       )}
 
-        <BottomBar className="flex justify-center items-center gap-3">
-        <button className="inline-flex items-center gap-2 justify-center rounded-[10px] bg-white px-4 h-10 shadow hover:bg-gray-100">
-          <span className="text-sm font-medium text-gray-800">
-            Cancel
-          </span>
+      {/* Bottom bar */}
+      <BottomBar className="flex justify-center items-center gap-3">
+        <button
+          onClick={() => setFiles([])}
+          className="inline-flex items-center gap-2 justify-center rounded-[10px] bg-white px-4 h-10 shadow hover:bg-gray-100"
+        >
+          Cancel
         </button>
 
-        <button className="inline-flex items-center gap-2 justify-center rounded-[10px] bg-white px-4 h-10 shadow hover:bg-gray-100">
-          <span className="text-sm font-medium text-gray-800">
-            Upload
-          </span>
+        <button
+          onClick={uploadFiles}
+          disabled={!files.length || !session}
+          className="inline-flex items-center gap-2 justify-center rounded-[10px] bg-black px-4 h-10 shadow text-white hover:bg-gray-800 disabled:opacity-50"
+        >
+          Upload
         </button>
       </BottomBar>
 
