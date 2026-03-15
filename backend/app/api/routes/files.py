@@ -1,15 +1,21 @@
 """app/api/routes/files.py — File storage and retrieval for courses using Supabase Storage"""
 import io
+import json
 import uuid
+import logging
 from typing import Optional, List
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Header, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Header, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.db.supabase import get_supabase
 from app.core.config import settings
+from app.main import generate_quiz
+from app.models.requests import QuizRequest
+
+logger = logging.getLogger(__name__)
 
 # Document parsing imports
 try:
@@ -50,7 +56,46 @@ class FileUploadResponse(BaseModel):
     filename: str
     storage_path: str
     extracted_content_preview: Optional[str] = None
+    auto_generation_queued: bool = False
     message: str
+
+
+class GeneratedTopic(BaseModel):
+    topic_id: str
+    name: str
+    category: str
+    description: Optional[str] = None
+    difficulty_level: str
+    prerequisites: List[str] = []
+    key_concepts: List[str] = []
+
+
+class FileTopicsResponse(BaseModel):
+    file_id: str
+    topics: List[GeneratedTopic]
+    total_count: int
+
+
+class FileQuizQuestion(BaseModel):
+    question: str
+    options: List[str]
+    correct_answer: str
+
+
+class FileQuiz(BaseModel):
+    quiz_id: str
+    file_id: str
+    topic_id: str
+    topic_name: str
+    difficulty: str
+    questions: List[FileQuizQuestion]
+    created_at: datetime
+
+
+class FileQuizzesResponse(BaseModel):
+    file_id: str
+    quizzes: List[FileQuiz]
+    total_count: int
 
 
 class FileListResponse(BaseModel):
@@ -146,10 +191,101 @@ def get_file_extension(filename: str) -> str:
     return filename.split(".")[-1].lower() if "." in filename else ""
 
 
+# ── Auto-Generation ──────────────────────────────────────────
+async def file_generate_quizzes(file_id: str, course_id: str, filename: str, extracted_content: str, num_quizzes: int = 5, user_id: Optional[str] = None):
+    """Background task: use Gemini to extract topics and pre-generate quizzes from uploaded file content."""
+    try:
+        db = get_supabase()
+        content_snippet = extracted_content[:8000]
+
+        # ── Step 1: Extract topics ─────────────────────────────
+        topic_prompt = f"""Analyze this document and identify the key learning topics it covers.
+
+Document: "{filename}"
+Content:
+{content_snippet}
+
+Return a JSON object with this exact structure:
+{{
+  "topics": [
+    {{
+      "topic_id": "snake_case_id",
+      "name": "Human Readable Name",
+      "category": "category_name",
+      "description": "1-2 sentence description",
+      "difficulty_level": "easy",
+      "prerequisites": [],
+      "key_concepts": ["concept1", "concept2"]
+    }}
+  ]
+}}
+
+Rules:
+- Generate 3-8 topics based on the document content
+- topic_id must be snake_case
+- prerequisites must reference other topic_ids from THIS document only
+- difficulty_level must be one of: easy, medium, hard"""
+
+        topics_response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=topic_prompt,
+            config={"response_mime_type": "application/json"}
+        )
+        topics_data = json.loads(topics_response.text)
+        topics = topics_data.get("topics", [])
+
+        # ── Step 2: Store topics + generate quizzes ────────────
+        for topic in topics:
+            namespaced_id = f"{file_id[:8]}_{topic['topic_id']}"
+
+            try:
+                db.table("topics").upsert({
+                    "topic_id": namespaced_id,
+                    "name": topic["name"],
+                    "category": topic.get("category", "general"),
+                    "description": topic.get("description"),
+                    "difficulty_level": topic.get("difficulty_level", "medium"),
+                    "prerequisites": [
+                        f"{file_id[:8]}_{p}" for p in topic.get("prerequisites", [])
+                    ],
+                    "source_file_id": file_id,
+                }, on_conflict="topic_id").execute()
+            except Exception as e:
+                logger.warning("Failed to upsert topic %s: %s", namespaced_id, e)
+
+            # Use the generate_quiz function from main.py
+            try:
+                quiz_request = QuizRequest(
+                    topic=topic['name'],
+                    difficulty=topic.get('difficulty_level', 'medium'),
+                    num_questions=num_quizzes
+                )
+                
+                # Pass profile_data as user_id to generate_quiz (it expects user_id for context)
+                quiz_response_text = await generate_quiz(quiz_request, user_id=user_id)
+                quiz_data = json.loads(quiz_response_text)
+
+                db.table("file_quizzes").insert({
+                    "file_id": file_id,
+                    "topic_id": namespaced_id,
+                    "topic_name": topic["name"],
+                    "quiz_data": quiz_data,
+                    "difficulty": topic.get("difficulty_level", "medium"),
+                }).execute()
+            except Exception as e:
+                logger.warning("Failed to generate/store quiz for topic %s: %s", namespaced_id, e)
+
+        logger.info("Auto-generation complete for file %s: %d topics processed", file_id, len(topics))
+
+    except Exception as e:
+        logger.error("file_generate_quizzes failed for file %s: %s", file_id, e)
+
+
 # ── Endpoints ────────────────────────────────────────────────
 
 @router.post("/upload", response_model=FileUploadResponse)
 async def upload_file(
+    background_tasks: BackgroundTasks,
     course_id: str = Form(...),
     file: UploadFile = File(...),
     extract_content: bool = Form(True),
@@ -241,14 +377,86 @@ async def upload_file(
             pass
         raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
     
+    auto_gen_queued = False
+    if extracted_content:
+        background_tasks.add_task(
+            file_generate_quizzes, file_id, course_id, file.filename, extracted_content, 5, user_id,
+        )
+        auto_gen_queued = True
+
     return FileUploadResponse(
         success=True,
         file_id=file_id,
         filename=file.filename,
         storage_path=storage_path,
         extracted_content_preview=content_preview,
-        message="File uploaded successfully"
+        auto_generation_queued=auto_gen_queued,
+        message="File uploaded successfully. Topics and quizzes are being generated." if auto_gen_queued else "File uploaded successfully"
     )
+
+
+@router.get("/{file_id}/topics", response_model=FileTopicsResponse)
+async def get_file_topics(
+    file_id: str,
+    authorization: Optional[str] = Header(None)
+):
+    """Get all auto-generated topics for a specific file."""
+    get_user_from_token(authorization)
+    db = get_supabase()
+
+    try:
+        response = db.table("topics").select("*").eq("source_file_id", file_id).order("created_at").execute()
+        topics = [
+            GeneratedTopic(
+                topic_id=row["topic_id"],
+                name=row["name"],
+                category=row["category"],
+                description=row.get("description"),
+                difficulty_level=row["difficulty_level"],
+                prerequisites=row.get("prerequisites") or [],
+                key_concepts=[],
+            )
+            for row in response.data
+        ]
+        return FileTopicsResponse(file_id=file_id, topics=topics, total_count=len(topics))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve topics: {str(e)}")
+
+
+@router.get("/{file_id}/quizzes", response_model=FileQuizzesResponse)
+async def get_file_quizzes(
+    file_id: str,
+    authorization: Optional[str] = Header(None)
+):
+    """Get all auto-generated quizzes for a specific file."""
+    get_user_from_token(authorization)
+    db = get_supabase()
+
+    try:
+        response = db.table("file_quizzes").select("*").eq("file_id", file_id).order("created_at").execute()
+        quizzes = []
+        for row in response.data:
+            raw_questions = row["quiz_data"].get("quiz", [])
+            questions = [
+                FileQuizQuestion(
+                    question=q["question"],
+                    options=q["options"],
+                    correct_answer=q["correct_answer"],
+                )
+                for q in raw_questions
+            ]
+            quizzes.append(FileQuiz(
+                quiz_id=row["id"],
+                file_id=row["file_id"],
+                topic_id=row["topic_id"],
+                topic_name=row["topic_name"],
+                difficulty=row["difficulty"],
+                questions=questions,
+                created_at=datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")),
+            ))
+        return FileQuizzesResponse(file_id=file_id, quizzes=quizzes, total_count=len(quizzes))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve quizzes: {str(e)}")
 
 
 @router.get("/course/{course_id}", response_model=FileListResponse)

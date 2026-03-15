@@ -313,3 +313,27 @@ create trigger course_files_updated_at before update on public.course_files
 -- Index for course files
 create index if not exists idx_course_files_course_id on public.course_files(course_id);
 create index if not exists idx_course_files_file_type on public.course_files(file_type);
+
+-- ── Auto-generated file content ───────────────────────────────
+
+-- Link topics back to the source file that generated them
+alter table public.topics add column if not exists source_file_id uuid references public.course_files(id) on delete set null;
+create index if not exists idx_topics_source_file_id on public.topics(source_file_id);
+
+-- Pre-generated quizzes per file/topic (created automatically on file upload)
+create table if not exists public.file_quizzes (
+  id          uuid primary key default uuid_generate_v4(),
+  file_id     uuid not null references public.course_files(id) on delete cascade,
+  topic_id    text not null,
+  topic_name  text not null,
+  quiz_data   jsonb not null,
+  difficulty  text not null default 'medium',
+  created_at  timestamptz not null default now()
+);
+
+alter table public.file_quizzes enable row level security;
+create policy "Everyone can view file quizzes" on public.file_quizzes for select using (true);
+create policy "Service role can insert file quizzes" on public.file_quizzes for insert with check (auth.role() = 'authenticated');
+
+create index if not exists idx_file_quizzes_file_id on public.file_quizzes(file_id);
+create index if not exists idx_file_quizzes_topic_id on public.file_quizzes(topic_id);
