@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 const videos = [
   "https://www.youtube.com/embed/aqz-KE-bpKQ",
@@ -7,7 +7,7 @@ const videos = [
   "https://www.youtube.com/embed/tgbNymZ7vqY",
 ];
 
-const VideoSlide = ({ src }: { src: string }) => {
+const VideoSlide = ({ src }: { src: string; }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -32,7 +32,7 @@ const VideoSlide = ({ src }: { src: string }) => {
           background: "#111",
         }}
       >
-    
+
         {!loaded && (
           <div
             style={{

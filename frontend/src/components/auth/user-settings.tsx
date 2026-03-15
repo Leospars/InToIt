@@ -1,22 +1,20 @@
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuItem,
   DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown/dropdown";
 
 import {
-  LayoutGridIcon,
-  UserCircleIcon,
   ChevronRightIcon,
-  BellIcon,
   LogOut,
   SettingsIcon,
+  UserCircleIcon
 } from "lucide-react";
 
-import { UserCard } from "./user-card";
-import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
+import { UserCard } from "./user-card";
 
 type Props = {
   user: User;

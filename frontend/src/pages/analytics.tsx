@@ -70,7 +70,7 @@ const scoreDistribution = [
 
 const COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#f97316", "#ef4444"];
 
-const ChartContainer = ({ children }: { children: React.ReactNode }) => (
+const ChartContainer = ({ children }: { children: React.ReactNode; }) => (
   <div className="w-full aspect-[16/9]">
     <ResponsiveContainer width="100%" height="100%">
       {children}
@@ -218,7 +218,7 @@ const Analytics = () => {
                 nameKey="name"
                 outerRadius="80%"
               >
-                {scoreDistribution.map((entry, index) => (
+                {scoreDistribution.map((_, index) => (
                   <Cell key={index} fill={COLORS[index]} />
                 ))}
               </Pie>

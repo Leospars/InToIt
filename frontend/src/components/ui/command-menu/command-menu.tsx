@@ -1,10 +1,10 @@
-import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
-  CommandIcon,
-  ArrowUpIcon,
   ArrowDownIcon,
+  ArrowUpIcon,
+  CommandIcon,
   SearchIcon,
 } from "lucide-react";
 
@@ -32,15 +32,13 @@ export function CommandMenu() {
   const [isOpen, setIsOpen] = useState(false);
 
   const navigate = useNavigate();
-  const location = useLocation();
-  const pathname = location.pathname;
 
   const ITEMS: ItemProps[] = [
     {
       heading: "Navigation",
       group: [
         { title: "Quiz", slug: "/quiz" },
-        { title: "Shorts", slug: "/shorts"},
+        { title: "Shorts", slug: "/shorts" },
         { title: "Course Outline", slug: "/course-outline" },
         { title: "Analytics", slug: "/analytics" },
       ],
