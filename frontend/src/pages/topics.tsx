@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Layers } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Carousel,
@@ -19,6 +19,9 @@ import {
 
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/auth-context";
+import { axiosInstance } from "@/utils/axios";
 
 function PopoverActions() {
   const navigate = useNavigate();
@@ -49,12 +52,43 @@ function PopoverActions() {
 }
 
 const TopicPage = () => {
-  const { topicId } = useParams();
+  const { topicId, courseId } = useParams();
   const topicName = topicId?.replace(/-/g, " ");
+
+  const { user } = useAuth();
+
+  const difficulty = "medium";
+  const { data: cardsRes } = useQuery({
+    queryKey: ["courses", user?.id, courseId, topicId, difficulty],
+    enabled: !!user,
+    queryFn: async () => await axiosInstance
+      .post(`/api/generate/flashcards`, {
+        topic: topicName,
+        num_cards: 5,
+      })
+      .then(res => JSON.parse(res.data) as { flashcards: { front: string, back: string; }[]; })
+  });
+
+  useEffect(() => {
+    console.log(cardsRes);
+  }, [cardsRes]);
 
   const ITEMS = new Array(4).fill(null).map((_, index) => index + 1);
 
   const [index, setIndex] = useState(0);
+  const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
+
+  const toggleFlip = (cardIndex: number) => {
+    setFlippedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardIndex)) {
+        newSet.delete(cardIndex);
+      } else {
+        newSet.add(cardIndex);
+      }
+      return newSet;
+    });
+  };
 
   const prev = () => {
     if (index > 0) {
@@ -73,7 +107,7 @@ const TopicPage = () => {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-8 py-10 pb-28">
 
- 
+
       <div className="flex flex-col gap-4 border-b pb-6">
         <div className="flex size-8 items-center justify-center rounded-lg bg-white shadow">
           <Layers size={18} className="text-gray-500" />
@@ -90,14 +124,40 @@ const TopicPage = () => {
         </div>
       </div>
 
-    
+
       <div className="relative w-full">
         <Carousel index={index} onIndexChange={setIndex}>
           <CarouselContent className="relative">
-            {ITEMS.map((item) => (
-              <CarouselItem key={item} className="flex justify-center px-4">
-                <div className="flex w-full max-w-3xl aspect-[16/9] items-center justify-center rounded-xl border border-zinc-200 bg-white text-3xl font-semibold shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950">
-                  {item}
+            {cardsRes?.flashcards.map((item, cardIndex) => (
+              <CarouselItem key={cardIndex} className="flex justify-center px-4">
+                <div
+                  className="relative w-full max-w-3xl aspect-[16/9] cursor-pointer"
+                  style={{ perspective: '1000px' }}
+                  onClick={() => toggleFlip(cardIndex)}
+                >
+                  <motion.div
+                    className="absolute inset-0 rounded-xl border border-zinc-200 bg-white shadow-sm transition hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950 flex items-center justify-center p-6"
+                    initial={false}
+                    animate={{ rotateY: flippedCards.has(cardIndex) ? 180 : 0 }}
+                    transition={{ duration: 0.6 }}
+                    style={{ transformStyle: 'preserve-3d' }}
+                  >
+                    <div
+                      className="absolute inset-0 flex items-center justify-center text-center text-2xl font-semibold"
+                      style={{ backfaceVisibility: 'hidden' }}
+                    >
+                      {item.front}
+                    </div>
+                    <div
+                      className="absolute inset-0 flex items-center justify-center text-center text-2xl font-semibold"
+                      style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
+                    >
+                      {item.back}
+                    </div>
+                  </motion.div>
+                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-sm text-gray-500">
+                    Click to flip
+                  </div>
                 </div>
               </CarouselItem>
             ))}
@@ -107,7 +167,7 @@ const TopicPage = () => {
 
       <BottomBar className="flex justify-center items-center gap-3">
 
-    
+
         <button
           onClick={prev}
           disabled={index === 0}
@@ -118,7 +178,7 @@ const TopicPage = () => {
           </span>
         </button>
 
-      
+
         <MorphingPopover
           variants={{
             initial: { opacity: 0, filter: "blur(10px)" },
