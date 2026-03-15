@@ -1,4 +1,5 @@
 import FeatureCards from "@/components/ui/feature-cards";
+import { TextEffect } from "@/components/ui/text-effect";
 import {
   UploadCloud,
   BookOpen,
@@ -10,23 +11,26 @@ const Home = () => {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col items-center pt-16 pb-12">
 
-      {/* HERO */}
+  
       <div className="flex w-full flex-col items-center gap-6 text-center">
 
         <FeatureCards />
 
         <div className="flex flex-col items-center gap-4">
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-            Welcome to <span className="text-gray-950">IntoIt</span>
-          </h1>
-
+              <TextEffect per='word' as='h1' preset='fade-in-blur' className="text-4xl font-semibold tracking-tight sm:text-5xl text-gray-950">
+     
+  
+     
+            Welcome to IntoIt
+         
+  </TextEffect>
           <p className="max-w-2xl text-lg text-gray-700">
             Turn your notes, PDFs, and lectures into structured study content.
             Generate quizzes, explore concepts, and learn faster with AI.
           </p>
         </div>
 
-        {/* CTA */}
+   
         <div className="flex items-center gap-3 mt-4">
 
           <a
@@ -50,7 +54,7 @@ const Home = () => {
 
 
 
-      {/* HOW IT WORKS */}
+
       <section className="w-full mt-28">
 
         <div className="text-center max-w-3xl mx-auto">
