@@ -9,6 +9,7 @@ from datetime import datetime
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Header, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
+from google import genai
 
 from app.db.supabase import get_supabase
 from app.core.config import settings
@@ -44,7 +45,7 @@ class FileMetadata(BaseModel):
     filename: str
     file_type: str
     size_bytes: int
-    storage_path: str
+    content_type: str
     extracted_content: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -54,7 +55,6 @@ class FileUploadResponse(BaseModel):
     success: bool
     file_id: str
     filename: str
-    storage_path: str
     extracted_content_preview: Optional[str] = None
     auto_generation_queued: bool = False
     message: str
@@ -172,6 +172,19 @@ def extract_pptx_content(file_bytes: bytes) -> str:
         raise HTTPException(status_code=400, detail=f"Error parsing PPTX: {str(e)}")
 
 
+def extract_txt_content(file_bytes: bytes) -> str:
+    """Extract text content from TXT file."""
+    try:
+        return file_bytes.decode('utf-8').strip()
+    except UnicodeDecodeError:
+        try:
+            return file_bytes.decode('latin-1').strip()
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error decoding TXT file: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading TXT file: {str(e)}")
+
+
 def extract_file_content(file_bytes: bytes, file_type: str) -> Optional[str]:
     """Extract text content based on file type."""
     file_type = file_type.lower()
@@ -182,6 +195,8 @@ def extract_file_content(file_bytes: bytes, file_type: str) -> Optional[str]:
         return extract_docx_content(file_bytes)
     elif file_type in ["pptx", "ppt"] or file_type.endswith(".pptx"):
         return extract_pptx_content(file_bytes)
+    elif file_type == "txt" or file_type.endswith(".txt"):
+        return extract_txt_content(file_bytes)
     
     return None
 
@@ -196,6 +211,7 @@ async def file_generate_quizzes(file_id: str, course_id: str, filename: str, ext
     """Background task: use Gemini to extract topics and pre-generate quizzes from uploaded file content."""
     try:
         db = get_supabase()
+        client = genai.Client(api_key=settings.gemini_api_key)
         content_snippet = extracted_content[:8000]
 
         # ── Step 1: Extract topics ─────────────────────────────
@@ -234,7 +250,7 @@ Rules:
         topics_data = json.loads(topics_response.text)
         topics = topics_data.get("topics", [])
 
-        # ── Step 2: Store topics + generate quizzes ────────────
+        # ── Step 2: Store topics + generate quizzes using ai.py ────────────
         for topic in topics:
             namespaced_id = f"{file_id[:8]}_{topic['topic_id']}"
 
@@ -253,7 +269,7 @@ Rules:
             except Exception as e:
                 logger.warning("Failed to upsert topic %s: %s", namespaced_id, e)
 
-            # Use the generate_quiz function from main.py
+            # Use the proper generate_quiz function from ai.py
             try:
                 quiz_request = QuizRequest(
                     topic=topic['name'],
@@ -293,29 +309,41 @@ async def upload_file(
 ):
     """
     Upload a file to Supabase Storage for a specific course.
-    Supports PDF, DOCX, and PPTX files with optional content extraction.
+    Supports PDF, DOCX, PPTX, and TXT files with optional content extraction.
     """
     user_id = get_user_from_token(authorization)
     
+    # Validate course exists
+    db = get_supabase()
+    try:
+        course_response = db.table("courses").select("course_id").eq("course_id", course_id).single().execute()
+        if not course_response.data:
+            raise HTTPException(status_code=404, detail="Course ID not found")
+    except Exception:
+        raise HTTPException(status_code=404, detail="Course ID not found")
+    
     # Validate file type
-    allowed_extensions = {"pdf", "docx", "pptx", "doc", "ppt"}
+    allowed_extensions = {"pdf", "docx", "pptx", "doc", "ppt", "txt"}
     file_ext = get_file_extension(file.filename)
+    
+    # Read file content first to get size
+    file_content = await file.read()
+    file_size = len(file_content)
     
     if file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=400, 
-            detail=f"Unsupported file type: {file_ext}. Allowed: {', '.join(allowed_extensions)}"
+            detail=f"Unsupported file type: {file_ext}. Allowed types: {', '.join(sorted(allowed_extensions))}. File '{file.filename}' cannot be processed."
         )
     
-    # Read file content
-    file_content = await file.read()
-    file_size = len(file_content)
-    
     if file_size == 0:
-        raise HTTPException(status_code=400, detail="Empty file uploaded")
+        raise HTTPException(status_code=400, detail=f"File '{file.filename}' is empty. Please select a file with content.")
     
     if file_size > 50 * 1024 * 1024:  # 50MB limit
-        raise HTTPException(status_code=400, detail="File size exceeds 50MB limit")
+        raise HTTPException(
+            status_code=400, 
+            detail=f"File '{file.filename}' exceeds 50MB limit. Current size: {file_size / (1024*1024):.2f}MB. Please compress the file or upload a smaller version."
+        )
     
     # Generate unique file ID and storage path
     file_id = str(uuid.uuid4())
@@ -331,8 +359,9 @@ async def upload_file(
             if extracted_content:
                 content_preview = extracted_content[:500] + "..." if len(extracted_content) > 500 else extracted_content
         except HTTPException:
-            # Continue without content extraction if it fails
-            pass
+            raise HTTPException(status_code=400, detail="Failed to extract content from file")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Failed to extract content from file")
     
     # Upload to Supabase Storage
     db = get_supabase()
@@ -352,7 +381,10 @@ async def upload_file(
                 file_options={"content-type": file.content_type or "application/octet-stream"}
             )
         except Exception as e2:
-            raise HTTPException(status_code=500, detail=f"Storage upload failed: {str(e2)}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Failed to upload file '{file.filename}' to storage. Error: {str(e2)}. Please try again later or contact support."
+            )
     
     # Store metadata in database
     try:
@@ -373,9 +405,12 @@ async def upload_file(
         # If DB insert fails, try to delete the uploaded file
         try:
             db.storage.from_("course-files").remove([storage_path])
-        except:
+        except Exception:
             pass
-        raise HTTPException(status_code=500, detail=f"Database insert failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to save file metadata for '{file.filename}' to database. Error: {str(e)}. The file was uploaded but not registered. Please contact support."
+        )
     
     auto_gen_queued = False
     if extracted_content:
@@ -504,7 +539,7 @@ async def get_file_content(
     authorization: Optional[str] = Header(None)
 ):
     """
-    Retrieve and extract content from a stored file.
+    Retrieve and extract content from a stored file in database.
     For PDF, DOCX, and PPTX files, returns extracted text content.
     """
     user_id = get_user_from_token(authorization)
@@ -530,14 +565,19 @@ async def get_file_content(
             extracted_at=datetime.fromisoformat(file_record["updated_at"].replace("Z", "+00:00"))
         )
     
-    # Otherwise, download and extract content
-    storage_path = file_record["storage_path"]
+    # Otherwise, extract content from file bytes in database
     file_ext = file_record["file_type"]
     
-    try:
-        file_bytes = db.storage.from_("course-files").download(storage_path)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to download file: {str(e)}")
+    # Get file content from database
+    file_bytes = file_record["file_content"]
+    if isinstance(file_bytes, str):
+        # Handle case where content might be base64 encoded
+        import base64
+        try:
+            file_bytes = base64.b64decode(file_bytes)
+        except Exception:
+            # If decoding fails, treat as string bytes
+            file_bytes = file_bytes.encode('latin-1')
     
     # Extract content
     try:
@@ -573,12 +613,12 @@ async def download_file(
     file_id: str,
     authorization: Optional[str] = Header(None)
 ):
-    """Download a file directly from storage."""
+    """Download a file directly from database."""
     user_id = get_user_from_token(authorization)
     
     db = get_supabase()
     
-    # Get file metadata
+    # Get file metadata and content
     try:
         response = db.table("course_files").select("*").eq("id", file_id).single().execute()
         if not response.data:
@@ -587,13 +627,16 @@ async def download_file(
     except Exception as e:
         raise HTTPException(status_code=404, detail="File not found")
     
-    # Download from storage
-    storage_path = file_record["storage_path"]
-    
-    try:
-        file_bytes = db.storage.from_("course-files").download(storage_path)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to download file: {str(e)}")
+    # Get file content from database
+    file_bytes = file_record["file_content"]
+    if isinstance(file_bytes, str):
+        # Handle case where content might be base64 encoded
+        import base64
+        try:
+            file_bytes = base64.b64decode(file_bytes)
+        except Exception:
+            # If decoding fails, treat as string bytes
+            file_bytes = file_bytes.encode('latin-1')
     
     # Determine content type
     content_type_map = {
@@ -603,7 +646,7 @@ async def download_file(
         "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "ppt": "application/vnd.ms-powerpoint"
     }
-    content_type = content_type_map.get(file_record["file_type"], "application/octet-stream")
+    content_type = file_record.get("content_type") or content_type_map.get(file_record["file_type"], "application/octet-stream")
     
     return StreamingResponse(
         io.BytesIO(file_bytes),
@@ -617,12 +660,12 @@ async def delete_file(
     file_id: str,
     authorization: Optional[str] = Header(None)
 ):
-    """Delete a file from storage and database."""
+    """Delete a file from database."""
     user_id = get_user_from_token(authorization)
     
     db = get_supabase()
     
-    # Get file metadata
+    # Get file metadata for response message
     try:
         response = db.table("course_files").select("*").eq("id", file_id).single().execute()
         if not response.data:
@@ -631,16 +674,7 @@ async def delete_file(
     except Exception as e:
         raise HTTPException(status_code=404, detail="File not found")
     
-    storage_path = file_record["storage_path"]
-    
-    # Delete from storage
-    try:
-        db.storage.from_("course-files").remove([storage_path])
-    except Exception as e:
-        # Continue even if storage delete fails (file might already be gone)
-        pass
-    
-    # Delete from database
+    # Delete from database (this removes both metadata and file content)
     try:
         db.table("course_files").delete().eq("id", file_id).execute()
     except Exception as e:
@@ -691,7 +725,7 @@ async def reextract_content(
     file_id: str,
     authorization: Optional[str] = Header(None)
 ):
-    """Re-extract content from a stored file (useful if extraction failed previously)."""
+    """Re-extract content from a stored file in database (useful if extraction failed previously)."""
     user_id = get_user_from_token(authorization)
     
     db = get_supabase()
@@ -705,14 +739,18 @@ async def reextract_content(
     except Exception as e:
         raise HTTPException(status_code=404, detail="File not found")
     
-    storage_path = file_record["storage_path"]
     file_ext = file_record["file_type"]
     
-    # Download file
-    try:
-        file_bytes = db.storage.from_("course-files").download(storage_path)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to download file: {str(e)}")
+    # Get file content from database
+    file_bytes = file_record["file_content"]
+    if isinstance(file_bytes, str):
+        # Handle case where content might be base64 encoded
+        import base64
+        try:
+            file_bytes = base64.b64decode(file_bytes)
+        except Exception:
+            # If decoding fails, treat as string bytes
+            file_bytes = file_bytes.encode('latin-1')
     
     # Extract content
     try:
