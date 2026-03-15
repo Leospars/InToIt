@@ -73,7 +73,7 @@ const TopicPage = () => {
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-8 py-10 pb-28">
 
-      {/* Header */}
+ 
       <div className="flex flex-col gap-4 border-b pb-6">
         <div className="flex size-8 items-center justify-center rounded-lg bg-white shadow">
           <Layers size={18} className="text-gray-500" />
@@ -90,7 +90,7 @@ const TopicPage = () => {
         </div>
       </div>
 
-      {/* Carousel */}
+    
       <div className="relative w-full">
         <Carousel index={index} onIndexChange={setIndex}>
           <CarouselContent className="relative">
@@ -105,10 +105,9 @@ const TopicPage = () => {
         </Carousel>
       </div>
 
-      {/* Bottom Controls */}
       <BottomBar className="flex justify-center items-center gap-3">
 
-        {/* Previous */}
+    
         <button
           onClick={prev}
           disabled={index === 0}
@@ -119,7 +118,7 @@ const TopicPage = () => {
           </span>
         </button>
 
-        {/* Next / Finish */}
+      
         <MorphingPopover
           variants={{
             initial: { opacity: 0, filter: "blur(10px)" },
