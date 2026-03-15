@@ -6,9 +6,13 @@ import {
   MorphingDialogSubtitle,
   MorphingDialogClose,
   MorphingDialogContainer,
+  useMorphingDialog,
+
 } from '@/components/ui/dialog/morphing-dialog';
+
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Cpu, BookOpen, Calculator, Globe } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
 type Topic = {
   title: string;
@@ -104,6 +108,45 @@ function ProgressBar({ value }: { value: number }) {
   );
 }
 
+function TopicsList({ course }: { course: Course }) {
+  const navigate = useNavigate();
+  const { setIsOpen } = useMorphingDialog();
+
+  return (
+    <div className="space-y-3">
+      {course.topics.map((topic) => (
+        <button
+          key={topic.title}
+          onClick={() => {
+            setIsOpen(false);
+
+            setTimeout(() => {
+              navigate(
+                `/course/${course.code}/topic/${topic.title
+                  .toLowerCase()
+                  .replace(/\s+/g, "-")}`
+              );
+            }, 500);
+          }}
+          className="w-full text-left rounded-2xl border border-zinc-200 bg-white p-4 hover:bg-zinc-50 transition"
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-800">
+              {topic.title}
+            </span>
+
+            <span className="text-sm text-zinc-500">
+              {topic.progress}%
+            </span>
+          </div>
+
+          <ProgressBar value={topic.progress} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function CourseDialog({ course }: { course: Course }) {
   const Icon = course.icon;
 
@@ -121,30 +164,33 @@ function CourseDialog({ course }: { course: Course }) {
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-100">
               <Icon size={20} className="text-zinc-700" />
             </div>
 
-            <div className="min-w-0 flex-1">
-              <MorphingDialogTitle className="truncate text-sm font-semibold text-zinc-900">
+            <div>
+              <MorphingDialogTitle className="text-sm font-semibold text-zinc-900">
                 {course.name}
               </MorphingDialogTitle>
 
-              <MorphingDialogSubtitle className="mt-0.5 text-sm text-zinc-500">
+              <MorphingDialogSubtitle className="text-sm text-zinc-500">
                 {course.code}
               </MorphingDialogSubtitle>
             </div>
+
           </div>
 
-          <p className="line-clamp-2 text-sm leading-5 text-zinc-600">
+          <p className="text-sm text-zinc-600">
             {course.description}
           </p>
 
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-sm text-zinc-500">
-              <span >Progress</span>
+            <div className="flex justify-between text-sm text-zinc-500">
+              <span>Progress</span>
               <span>{course.progress}%</span>
             </div>
+
             <ProgressBar value={course.progress} />
           </div>
         </div>
@@ -153,69 +199,52 @@ function CourseDialog({ course }: { course: Course }) {
       <MorphingDialogContainer>
         <MorphingDialogContent
           style={{ borderRadius: 24 }}
-          className="relative w-[min(92vw,560px)] overflow-hidden border border-zinc-200 bg-white shadow-2xl"
+          className="relative w-[min(92vw,560px)] border border-zinc-200 bg-white shadow-2xl"
         >
-          <div className="max-h-[85vh] overflow-hidden">
-            <ScrollArea className="h-[85vh]" type="scroll">
-              <div className="p-6">
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4 pr-10">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-zinc-100">
-                      <Icon size={26} className="text-zinc-700" />
-                    </div>
+          <ScrollArea className="h-[85vh]">
+            <div className="p-6 space-y-6">
 
-                    <div className="min-w-0">
-                      <MorphingDialogTitle className="text-xl font-semibold text-zinc-900">
-                        {course.name}
-                      </MorphingDialogTitle>
+              <div className="flex gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-100">
+                  <Icon size={26} className="text-zinc-700" />
+                </div>
 
-                      <MorphingDialogSubtitle className="mt-1 text-sm text-zinc-500">
-                        {course.code} · {course.lecturer}
-                      </MorphingDialogSubtitle>
-                    </div>
-                  </div>
+                <div>
+                  <MorphingDialogTitle className="text-xl font-semibold text-zinc-900">
+                    {course.name}
+                  </MorphingDialogTitle>
 
-                  <p className="text-sm leading-6 text-zinc-700">
-                    {course.description}
-                  </p>
-
-                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-                    <div className="mb-2 flex items-center justify-between text-sm font-medium text-zinc-800">
-                      <span>Course Progress</span>
-                      <span>{course.progress}%</span>
-                    </div>
-                    <ProgressBar value={course.progress} />
-                  </div>
-
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-zinc-900">
-                      Topics
-                    </h3>
-
-                    <div className="space-y-3">
-                      {course.topics.map((topic) => (
-                        <div
-                          key={topic.title}
-                          className="rounded-2xl border border-zinc-200 bg-white p-4"
-                        >
-                          <div className="mb-2 flex items-center justify-between gap-3">
-                            <span className="text-sm font-medium text-zinc-800">
-                              {topic.title}
-                            </span>
-                            <span className="text-sm text-zinc-500">
-                              {topic.progress}%
-                            </span>
-                          </div>
-
-                          <ProgressBar value={topic.progress} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <MorphingDialogSubtitle className="text-sm text-zinc-500">
+                    {course.code} · {course.lecturer}
+                  </MorphingDialogSubtitle>
                 </div>
               </div>
-            </ScrollArea>
-          </div>
+
+              <p className="text-sm text-zinc-700">
+                {course.description}
+              </p>
+
+              <div>
+                <div className="flex justify-between text-sm font-medium">
+                  <span>Course Progress</span>
+                  <span>{course.progress}%</span>
+                </div>
+
+                <ProgressBar value={course.progress} />
+              </div>
+
+              <div className="space-y-3">
+
+                <h3 className="text-sm font-semibold text-zinc-900">
+                  Topics
+                </h3>
+
+                <TopicsList course={course} />
+
+              </div>
+
+            </div>
+          </ScrollArea>
 
           <MorphingDialogClose className="text-zinc-500" />
         </MorphingDialogContent>
