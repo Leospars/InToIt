@@ -44,23 +44,22 @@ const Sidebar = () => {
         </NavLink>
 
         <NavLink
-  to="/upload"
-  className={({ isActive }) =>
-    `${linkBase} ${isActive ? active : inactive}`
-  }
->
- <PlusCircle size={18} />
+          to="/upload"
+          className={({ isActive }) =>
+            `${linkBase} ${isActive ? active : inactive}`
+          }
+        >
+          <PlusCircle size={18} />
 
-  Upload
-</NavLink>
+          Upload
+        </NavLink>
 
         <Accordion expandedValue={activeCourse ? "courses" : null}>
           <AccordionItem value="courses">
 
             <AccordionTrigger
-              className={`${linkBase} ${
-                activeCourse ? active : inactive
-              } w-full flex items-center justify-between`}
+              className={`${linkBase} ${activeCourse ? active : inactive
+                } w-full flex items-center justify-between`}
             >
               <NavLink
                 to="/course-outline"
@@ -103,25 +102,23 @@ const Sidebar = () => {
                           <NavLink
                             to={topicPath}
                             className={() =>
-                              `flex w-full text-sm px-3 py-1.5 rounded-md capitalize ${
-                                isTopicActive
-                                  ? "bg-gray-200 text-black"
-                                  : "text-gray-600 hover:text-black hover:bg-gray-100"
+                              `flex w-full text-sm px-3 py-1.5 rounded-md capitalize ${isTopicActive
+                                ? "bg-gray-200 text-black"
+                                : "text-gray-600 hover:text-black hover:bg-gray-100"
                               }`
                             }
                           >
                             {topic.replace(/-/g, " ")}
                           </NavLink>
 
-                          <AccordionContent className = "mt-2 ml-4">
+                          <AccordionContent className="mt-2 ml-4">
                             {isTopicActive && (
                               <NavLink
                                 to={quizPath}
                                 className={({ isActive }) =>
-                                  `flex w-full text-sm px-3 py-1.5 rounded-md  ${
-                                    isActive
-                                      ? "bg-gray-200 text-black"
-                                      : "text-gray-600 hover:text-black hover:bg-gray-100"
+                                  `flex w-full text-sm px-3 py-1.5 rounded-md  ${isActive
+                                    ? "bg-gray-200 text-black"
+                                    : "text-gray-600 hover:text-black hover:bg-gray-100"
                                   }`
                                 }
                               >
@@ -150,6 +147,16 @@ const Sidebar = () => {
         >
           <BarChart3 size={18} />
           Analytics
+        </NavLink>
+
+        <NavLink
+          to="/live-chat"
+          className={({ isActive }) =>
+            `${linkBase} ${isActive ? active : inactive}`
+          }
+        >
+          <Clapperboard size={18} />
+          Live Assistant
         </NavLink>
 
       </nav>
