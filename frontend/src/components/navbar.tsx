@@ -1,3 +1,5 @@
+import { CommandMenu } from "./ui/command-menu/command-menu";
+
 const Navbar = () => {
   return (
     <header className="flex h-16 w-full items-center justify-between border-b border-gray-200 px-4">
@@ -7,6 +9,9 @@ const Navbar = () => {
         <button className="inline-flex items-center justify-center bg-white text-gray-950 shadow hover:bg-gray-100 h-8 rounded-lg px-3 text-sm">
           Feedback
         </button>
+
+
+        <CommandMenu/>
       </div>
     </header>
   );
