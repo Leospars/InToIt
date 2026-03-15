@@ -23,8 +23,7 @@ import {
   Zap,
   Clock,
 } from "lucide-react";
-
-const API_URL = "https://intoit-rqhi.onrender.com";
+import { axiosInstance } from "@/utils/axios";
 
 const COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#f97316", "#ef4444"];
 
@@ -118,13 +117,11 @@ const Analytics = ({ userId }: { userId: string }) => {
 
   const fetchAnalytics = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/progress/${userId}/report`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId }),
+      const res = await axiosInstance.post(`/api/v1/progress/${userId}/report`, {
+        user_id: userId,
       });
 
-      const data = await res.json();
+      const data = res.data;
 
       const correct = data.answer_stats.total_correct;
       const wrong = data.answer_stats.total_wrong;

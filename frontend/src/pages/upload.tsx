@@ -14,8 +14,6 @@ type UploadFile = {
   progress: number | null;
 };
 
-const API_URL = "https://intoit-rqhi.onrender.com";
-
 const Upload = () => {
   const { session, user } = useAuth();
   const [files, setFiles] = useState<UploadFile[]>([]);
@@ -81,8 +79,10 @@ const Upload = () => {
       form.append("extract_content", "true");
 
       const xhr = new XMLHttpRequest();
+      const api_url = import.meta.env.VITE_API_BASE_URL;
+      console.log("API URL:", api_url);
 
-      xhr.open("POST", `${API_URL}/api/files/upload`);
+      xhr.open("POST", `${api_url}/api/files/upload`);
 
       xhr.setRequestHeader(
         "Authorization",

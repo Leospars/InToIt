@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Clapperboard, BookOpen, BarChart3, PlusCircle } from "lucide-react";
+import { Clapperboard, BookOpen, BarChart3, PlusCircle, Brain, Network } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { SignInDialog } from "./auth/sign-in";
 import { UserSettingsDropdown } from "./auth/user-settings";
@@ -157,6 +157,26 @@ const Sidebar = () => {
         >
           <Clapperboard size={18} />
           Live Assistant
+        </NavLink>
+
+        <NavLink
+          to="/cortex"
+          className={({ isActive }) =>
+            `${linkBase} ${isActive ? active : inactive}`
+          }
+        >
+          <Brain size={18} />
+          Cortex
+        </NavLink>
+
+        <NavLink
+          to="/synapse"
+          className={({ isActive }) =>
+            `${linkBase} ${isActive ? active : inactive}`
+          }
+        >
+          <Network size={18} />
+          Synapse
         </NavLink>
 
       </nav>
