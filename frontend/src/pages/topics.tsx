@@ -1,6 +1,6 @@
-import { useParams, useNavigate } from "react-router-dom";
 import { Layers } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import {
   Carousel,
@@ -17,11 +17,11 @@ import {
   useMorphingPopover,
 } from "@/components/ui/popover/morphing-popover";
 
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { axiosInstance } from "@/utils/axios";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 
 function PopoverActions() {
   const navigate = useNavigate();
@@ -31,6 +31,11 @@ function PopoverActions() {
   const goToQuiz = () => {
     close();
     navigate(`/course/${courseId}/topic/${topicId}/quiz/1`);
+  };
+
+  const goToLive = () => {
+    close();
+    navigate(`/live-chat`);
   };
 
   return (
@@ -46,7 +51,9 @@ function PopoverActions() {
         Quiz
       </Button>
 
-      <Button className="w-full">Prompt AI</Button>
+      <Button variant="outline" className="w-full" onClick={goToLive}>
+        Prompt AI
+      </Button>
     </div>
   );
 }
@@ -68,12 +75,6 @@ const TopicPage = () => {
       })
       .then(res => JSON.parse(res.data) as { flashcards: { front: string, back: string; }[]; })
   });
-
-  useEffect(() => {
-    console.log(cardsRes);
-  }, [cardsRes]);
-
-  const ITEMS = new Array(4).fill(null).map((_, index) => index + 1);
 
   const [index, setIndex] = useState(0);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
@@ -97,7 +98,9 @@ const TopicPage = () => {
   };
 
   const handleNext = (e: React.MouseEvent) => {
-    if (index < ITEMS.length - 1) {
+    if (!cardsRes) return;
+
+    if (index < cardsRes.flashcards.length - 1) {
       e.preventDefault();
       e.stopPropagation();
       setIndex((prev) => prev + 1);
