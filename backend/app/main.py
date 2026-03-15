@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.api.routes import auth, progress, search, proxy, voice, live_chat, files, ai
+from app.api.routes import auth, progress, search, proxy, voice, live_chat, files, ai, knowledge
 from app.models.progress import ProgressUpdate
 from google import genai
 from app.core.gemini_live import GeminiLive
@@ -50,6 +50,7 @@ app.include_router(voice.router,    prefix="/api/voice",    tags=["voice"])
 app.include_router(live_chat.router, prefix="/api", tags=["live-chat"])
 app.include_router(files.router, prefix="/api/files", tags=["files"])
 app.include_router(ai.router, prefix="/api", tags=["ai"])
+app.include_router(knowledge.router, prefix="/api/knowledge", tags=["knowledge"])
 
 @app.get("/api/health")
 async def health():
