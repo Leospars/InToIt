@@ -1,13 +1,14 @@
-import { Routes, Route } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 
 import Navbar from "./components/navbar";
 import Sidebar from "./components/sidebar";
 
+import Analytics from "./pages/analytics";
+import CourseOutline from "./pages/course-outline";
+import Home from "./pages/home";
+import { RootChat } from "./pages/live-chat";
 import Quiz from "./pages/quiz";
 import Shorts from "./pages/shorts";
-import CourseOutline from "./pages/course-outline";
-import Analytics from "./pages/analytics";
-import Home from "./pages/home";
 import TopicPage from "./pages/topics";
 
 const App = () => {
@@ -29,6 +30,7 @@ const App = () => {
             <Route path="/shorts" element={<Shorts />} />
             <Route path="/course-outline" element={<CourseOutline />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/live-chat" element={<RootChat />} />
 
             <Route
               path="/course/:courseId/topic/:topicId"

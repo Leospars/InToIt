@@ -3,22 +3,17 @@ INTOIT Learning — FastAPI Backend
 Python 3.12 + FastAPI + Supabase + Anthropic
 """
 from contextlib import asynccontextmanager
-import os
-import asyncio
-import base64
-import json
-import websockets
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.api.routes import auth, progress, search, proxy, voice
+from app.api.routes import auth, progress, search, proxy, voice, live_chat
 from app.utils.audio_utils import validate_audio_format, convert_to_pcm16, get_audio_metadata
 from app.models.progress import ProgressUpdate
 from app.models.requests import QuizRequest, FlashcardsRequest, ExplainRequest
 from google import genai
-
+from app.core.gemini_live import GeminiLive
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,11 +42,12 @@ app.add_middleware(
 )
 
 # ── Routes ────────────────────────────────────────────────
-app.include_router(auth.router,     prefix="/api/auth",     tags=["auth"])
-app.include_router(progress.router, prefix="/api/progress", tags=["progress"])
-app.include_router(search.router,   prefix="/api/search",   tags=["search"])
-app.include_router(proxy.router,    prefix="/api/proxy",    tags=["proxy"])
-app.include_router(voice.router,    prefix="/api/voice",    tags=["voice"])
+app.include_router(auth.router,         prefix="/api/auth",         tags=["auth"])
+app.include_router(progress.router,     prefix="/api/progress",     tags=["progress"])
+app.include_router(search.router,       prefix="/api/search",       tags=["search"])
+app.include_router(proxy.router,        prefix="/api/proxy",        tags=["proxy"])
+app.include_router(voice.router,        prefix="/api/voice",        tags=["voice"])
+app.include_router(live_chat.router,    prefix="/api/live-chat",    tags=["live-chat"])
 
 
 @app.get("/api/health")
@@ -152,182 +148,3 @@ async def get_progress():
     # Retrieve user progress
     
     pass
-
-
-@app.websocket("/api/live-chat")
-async def live_chat(websocket: WebSocket):
-    await websocket.accept()
-    
-    # Gemini Live API WebSocket configuration
-    MODEL_NAME = "gemini-2.5-flash-native-audio-preview-12-2025"
-    API_KEY = settings.gemini_api_key
-    WS_URL = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={API_KEY}"
-    
-    try:
-        # Connect to Gemini Live API WebSocket
-        async with websockets.connect(WS_URL) as gemini_ws:
-            print("Connected to Gemini Live API")
-            
-            # Send initial configuration
-            config_message = {
-                "config": {
-                    "model": f"models/{MODEL_NAME}",
-                    "responseModalities": ["AUDIO"],
-                    "systemInstruction": {
-                        "parts": [{"text": "You are a helpful AI tutor. Be clear, concise, and encouraging."}]
-                    },
-                    "speechConfig": {
-                        "voiceConfig": {
-                            "prebuiltVoiceConfig": {
-                                "voiceName": "Algieba"
-                            }
-                        }
-                    }
-                }
-            }
-            await gemini_ws.send(json.dumps(config_message))
-            print("Configuration sent to Gemini")
-            
-            # Handle bidirectional communication
-            receive_task = asyncio.create_task(receive_from_gemini(gemini_ws, websocket))
-            send_task = asyncio.create_task(send_to_gemini(gemini_ws, websocket))
-            
-            # Wait for either task to complete (connection closed)
-            done, pending = await asyncio.wait(
-                [receive_task, send_task], 
-                return_when=asyncio.FIRST_COMPLETED
-            )
-            
-            # Cancel pending tasks
-            for task in pending:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-                    
-    except WebSocketDisconnect:
-        print("Client WebSocket disconnected")
-    except Exception as e:
-        print(f"Error in live chat: {e}")
-        await websocket.close()
-
-async def receive_from_gemini(gemini_ws: websockets.WebSocketServerProtocol, websocket: WebSocket):
-    """Receive responses from Gemini and send to client"""
-    try:
-        async for message in gemini_ws:
-            response = json.loads(message)
-            print("Received from Gemini:", response)
-            
-            # Handle server content
-            if "serverContent" in response:
-                server_content = response["serverContent"]
-                
-                # Receiving Audio
-                if "modelTurn" in server_content and "parts" in server_content["modelTurn"]:
-                    for part in server_content["modelTurn"]["parts"]:
-                        if "inlineData" in part:
-                            audio_data_b64 = part["inlineData"]["data"]
-                            # Decode base64 audio and send to client
-                            audio_data = base64.b64decode(audio_data_b64)
-                            await websocket.send_bytes(audio_data)
-                            print(f"Sent audio data to client (len: {len(audio_data)})")
-                
-                # Receiving Text Transcriptions
-                if "inputTranscription" in server_content:
-                    transcription_text = server_content['inputTranscription']['text']
-                    await websocket.send_text(json.dumps({
-                        "type": "transcription", 
-                        "content": transcription_text,
-                        "speaker": "user"
-                    }))
-                    print(f"User transcription: {transcription_text}")
-                    
-                if "outputTranscription" in server_content:
-                    transcription_text = server_content['outputTranscription']['text']
-                    await websocket.send_text(json.dumps({
-                        "type": "transcription", 
-                        "content": transcription_text,
-                        "speaker": "gemini"
-                    }))
-                    print(f"Gemini transcription: {transcription_text}")
-            
-            # Handle tool calls
-            if "toolCall" in response:
-                await handle_tool_call(gemini_ws, response["toolCall"])
-                
-    except Exception as e:
-        print(f"Error receiving from Gemini: {e}")
-
-async def send_to_gemini(gemini_ws: websockets.WebSocketServerProtocol, websocket: WebSocket):
-    """Receive audio from client and send to Gemini"""
-    try:
-        while True:
-            # Receive audio data from client
-            data = await websocket.receive_bytes()
-            
-            # Validate audio format
-            is_valid, error_msg = validate_audio_format(data)
-            if not is_valid:
-                print(f"Invalid audio format: {error_msg}")
-                await websocket.send_text(json.dumps({
-                    "type": "error", 
-                    "message": f"Invalid audio format: {error_msg}"
-                }))
-                continue
-            
-            # Convert to PCM16 if needed
-            pcm_data = convert_to_pcm16(data)
-            
-            # Log audio metadata for debugging
-            metadata = get_audio_metadata(pcm_data)
-            print(f"Received audio: {metadata}")
-            
-            # Encode audio as base64 and send to Gemini
-            encoded_data = base64.b64encode(pcm_data).decode('utf-8')
-            audio_message = {
-                "realtimeInput": {
-                    "audio": {
-                        "data": encoded_data,
-                        "mimeType": "audio/pcm;rate=16000"
-                    }
-                }
-            }
-            await gemini_ws.send(json.dumps(audio_message))
-            
-    except WebSocketDisconnect:
-        print("Client disconnected from send task")
-        # Signal end of turn to Gemini
-        await gemini_ws.send(json.dumps({"realtimeInput": {"text": "."}}))
-    except Exception as e:
-        print(f"Error sending to Gemini: {e}")
-
-async def handle_tool_call(gemini_ws: websockets.WebSocketServerProtocol, tool_call):
-    """Handle tool calls from Gemini"""
-    function_responses = []
-    
-    for fc in tool_call.get("functionCalls", []):
-        # Execute the function locally (placeholder implementation)
-        try:
-            # Placeholder for actual tool execution
-            result = {"status": "success", "data": "Tool executed"}
-            response_data = {"result": result}
-        except Exception as e:
-            print(f"Error executing tool {fc.get('name', 'unknown')}: {e}")
-            response_data = {"error": str(e)}
-        
-        # Prepare the response
-        function_responses.append({
-            "name": fc.get("name", "unknown"),
-            "id": fc.get("id", "unknown"),
-            "response": response_data
-        })
-    
-    # Send the tool response back to Gemini
-    tool_response_message = {
-        "toolResponse": {
-            "functionResponses": function_responses
-        }
-    }
-    await gemini_ws.send(json.dumps(tool_response_message))
-    print("Sent tool response to Gemini")
