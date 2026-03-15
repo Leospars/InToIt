@@ -63,7 +63,7 @@ export function CommandMenu() {
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "group relative flex items-center justify-between gap-4 pl-3 pr-2 py-1.5 border rounded-full text-[13px]",
+          "group relative flex items-center justify-between gap-4 pl-3 pr-2 py-1.5 border rounded-full text-[13px] w-full",
           "border-gray-200 bg-white hover:bg-gray-100",
         )}
       >

@@ -110,7 +110,7 @@ const Sidebar = () => {
         </NavLink>
       </nav>
 
-      <div className="mt-auto border-t border-gray-200 p-3">
+      <div className="mt-auto border-t border-gray-200 p-3" style={{height: 75}}>
         {user ? <UserSettingsDropdown user={user} /> : <SignInDialog />}
       </div>
     </aside>
