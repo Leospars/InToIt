@@ -6,7 +6,7 @@ from google import genai
 
 from app.db.supabase import get_supabase
 from app.core.config import settings
-from app.core.bkt import update_bkt, batch_update, classify_mastery, build_gemini_context
+from app.core.knowledge import bkt_batch, BKTParams, classify_mastery, build_gemini_context
 
 router = APIRouter()
 
@@ -368,9 +368,11 @@ async def submit_quiz_result(user_id: str, body: QuizResultRequest):
     results_dicts = [r.model_dump() for r in body.results]
 
     # 2. Batch BKT update
-    p_know_final, p_befores, p_afters = batch_update(
-        p_know_init, p_transit, p_slip, p_guess, results_dicts
-    )
+    _params      = BKTParams(p_know=p_know_init, p_transit=p_transit, p_slip=p_slip, p_guess=p_guess, attempts=prev_attempts)
+    _result      = bkt_batch([r["correct"] for r in results_dicts], _params)
+    p_know_final = _result.p_know_final
+    p_befores    = [s.p_know_before for s in _result.steps]
+    p_afters     = [s.p_know_after  for s in _result.steps]
     new_attempts = prev_attempts + len(results_dicts)
     new_mastery  = classify_mastery(p_know_final, new_attempts)
 
