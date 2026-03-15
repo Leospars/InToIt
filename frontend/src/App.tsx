@@ -10,6 +10,7 @@ import { RootChat } from "./pages/live-chat";
 import Quiz from "./pages/quiz";
 import Shorts from "./pages/shorts";
 import TopicPage from "./pages/topics";
+import Upload from "./pages/upload";
 
 const App = () => {
   return (
@@ -26,12 +27,12 @@ const App = () => {
 
             <Route path="/" element={<Home />} />
 
-            <Route path="/quiz" element={<Quiz />} />
+    
             <Route path="/shorts" element={<Shorts />} />
             <Route path="/course-outline" element={<CourseOutline />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/live-chat" element={<RootChat />} />
-
+<Route path="/upload" element={<Upload />} />
             <Route
               path="/course/:courseId/topic/:topicId"
               element={<TopicPage />}
