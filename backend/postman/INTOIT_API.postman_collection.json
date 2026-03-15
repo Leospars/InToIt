@@ -1,0 +1,172 @@
+{
+	"info": {
+		"_postman_id": "intoit-api-collection",
+		"name": "INTOIT Learning API",
+		"description": "Test collection for INTOIT Learning FastAPI backend endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/health",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "health"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Quiz",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"topic\": \"Python Programming\",\n  \"difficulty\": \"medium\",\n  \"num_questions\": 5\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/generate/quiz?topic=Python Programming&difficulty=medium&num_questions=5",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "generate", "quiz"],
+					"query": [
+						{
+							"key": "topic",
+							"value": "Python Programming",
+							"description": "Topic for quiz generation"
+						},
+						{
+							"key": "difficulty",
+							"value": "medium",
+							"description": "Difficulty level: easy, medium, hard"
+						},
+						{
+							"key": "num_questions",
+							"value": "5",
+							"description": "Number of questions to generate"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Flashcards",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"topic\": \"Machine Learning\",\n  \"num_cards\": 10\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/generate/flashcards?topic=Machine Learning&num_cards=10",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "generate", "flashcards"],
+					"query": [
+						{
+							"key": "topic",
+							"value": "Machine Learning",
+							"description": "Topic for flashcard generation"
+						},
+						{
+							"key": "num_cards",
+							"value": "10",
+							"description": "Number of flashcards to generate"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Explain Topic",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"topic\": \"Neural Networks\",\n  \"difficulty\": \"simple\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/explain?topic=Neural Networks&difficulty=simple",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "explain"],
+					"query": [
+						{
+							"key": "topic",
+							"value": "Neural Networks",
+							"description": "Topic to explain"
+						},
+						{
+							"key": "difficulty",
+							"value": "simple",
+							"description": "Explanation difficulty: simple, intermediate, advanced"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Progress",
+			"request": {
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"user_id\": \"user123\",\n  \"lesson_id\": \"lesson456\",\n  \"quiz_score\": 85,\n  \"time_spent\": 1200,\n  \"completed_lessons\": [\"lesson1\", \"lesson2\", \"lesson3\"]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/progress",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "progress"]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Progress",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/progress",
+					"host": ["{{baseUrl}}"],
+					"path": ["api", "progress"]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		}
+	]
+}
