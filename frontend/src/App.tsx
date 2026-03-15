@@ -37,6 +37,8 @@ const App = () => {
               element={<TopicPage />}
             />
 
+              <Route  path="/course/:courseId/topic/:topicId/quiz/:quizId" element={<Quiz />} />
+
           </Routes>
         </main>
 
