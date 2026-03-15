@@ -11,7 +11,7 @@ frontend/dist/
 frontend/stats.html
 
 # Environment
-.env
+# .env
 .env.local
 .env.*.local
 backend/.env
