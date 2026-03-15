@@ -10,7 +10,7 @@
   border: 2px solid #e6e6e6;
   box-shadow: 0 2px 0 #e6e6e6;
   cursor: pointer;
-  font-family: "OpenRunde", ui-sans-serif, system-ui, -apple-system;
+
   &:focus {
     outline: none;
   }
@@ -24,7 +24,7 @@
   box-shadow: 0 2px 0 #eb5a53;
   background-color: #f9e0df;
   cursor: pointer;
-  font-family: "OpenRunde", ui-sans-serif, system-ui, -apple-system;
+
 }
 
 .button-incorrect div {
@@ -41,5 +41,5 @@
   box-shadow: 0 2px 0 #45c858;
   background-color: #e0f9df;
   cursor: pointer;
-  font-family: "OpenRunde", ui-sans-serif, system-ui, -apple-system;
+
 }

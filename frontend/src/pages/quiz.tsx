@@ -112,9 +112,11 @@ const Quiz = () => {
             transition={{ duration: 0.25 }}
             className="space-y-4"
           >
-            <h2 className="text-[0.92rem] md:text-xl font-medium leading-normal mb-6 md:mb-7">
+            <h3 className="text-gray-950 font-[550]">
               {currentQuestion.question}
-            </h2>
+            </h3>
+
+
 
             <div className="grid gap-2 md:gap-3">
               {currentQuestion.options.map((option, index) => {
@@ -147,7 +149,7 @@ const Quiz = () => {
                   <div
                     key={index}
                     onClick={() => handleOptionClick(index)}
-                    className={`flex items-center gap-3 px-3 py-2.5 font-medium ${buttonClass} rounded-lg transition-colors ${
+                    className={`flex items-center gap-3 px-3 py-2.5 ${buttonClass} rounded-lg transition-colors ${
                       isClickable ? "cursor-pointer" : "cursor-default"
                     }`}
                   >
@@ -155,7 +157,7 @@ const Quiz = () => {
                       {String.fromCharCode(65 + index)}
                     </div>
 
-                    <p className="text-[0.9rem] md:text-base">{option}</p>
+                    <p className="w-full text-gray-600 ">{option}</p>
                   </div>
                 );
               })}

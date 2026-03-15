@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Clapperboard, BookOpen, BarChart3 } from "lucide-react";
+import { Clapperboard, BookOpen, BarChart3, PlusCircle } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { SignInDialog } from "./auth/sign-in";
 import { UserSettingsDropdown } from "./auth/user-settings";
@@ -42,6 +42,17 @@ const Sidebar = () => {
           <Clapperboard size={18} />
           Shorts
         </NavLink>
+
+        <NavLink
+  to="/upload"
+  className={({ isActive }) =>
+    `${linkBase} ${isActive ? active : inactive}`
+  }
+>
+ <PlusCircle size={18} />
+
+  Upload
+</NavLink>
 
         <Accordion expandedValue={activeCourse ? "courses" : null}>
           <AccordionItem value="courses">
@@ -102,12 +113,12 @@ const Sidebar = () => {
                             {topic.replace(/-/g, " ")}
                           </NavLink>
 
-                          <AccordionContent className = "mt-2">
+                          <AccordionContent className = "mt-2 ml-4">
                             {isTopicActive && (
                               <NavLink
                                 to={quizPath}
                                 className={({ isActive }) =>
-                                  `flex w-full text-sm px-3 py-1.5 rounded-md ml-4 ${
+                                  `flex w-full text-sm px-3 py-1.5 rounded-md  ${
                                     isActive
                                       ? "bg-gray-200 text-black"
                                       : "text-gray-600 hover:text-black hover:bg-gray-100"
