@@ -6,15 +6,52 @@ import os
 from fastapi import APIRouter
 from fastapi import WebSocket, WebSocketDisconnect
 from app.core.gemini_live import GeminiLive
+from app.api.routes import knowledge
+from app.db.supabase import get_supabase
 
 router = APIRouter()
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for Gemini Live."""
-    await websocket.accept()
 
-    print("WebSocket connection accepted")
+    # ── Token Extraction ───────────────────────────────────────
+    # Client sends token in subprotocol format: "token.{ACCESS_TOKEN}"
+    subprotocols = websocket.headers.get("sec-websocket-protocol", "")
+    access_token = None
+
+    for protocol in subprotocols.split(","):
+        protocol = protocol.strip()
+        if protocol.startswith("token."):
+            access_token = protocol[len("token."):]
+            break
+
+    if not access_token:
+        await websocket.close(code=1008, reason="Missing token in subprotocol")
+        return
+
+    # ── Token Verification via Supabase ────────────────────────
+    try:
+        db = get_supabase()
+        user_response = db.auth.get_user(access_token)
+
+        if not user_response or not user_response.user:
+            await websocket.close(code=1008, reason="Invalid or expired token")
+            return
+
+        user_id = user_response.user.id
+
+    except Exception as e:
+        print(f"Token verification failed: {e}")
+        await websocket.close(code=1008, reason="Token verification failed")
+        return
+
+    # ── Accept with matching subprotocol ──────────────────────
+    # Must echo back the matched subprotocol, otherwise the browser
+    # will reject the connection with a subprotocol mismatch error
+    await websocket.accept(subprotocol=f"token.{access_token}")
+
+    print(f"WebSocket connection accepted for user: {user_id}")
 
     audio_input_queue = asyncio.Queue()
     video_input_queue = asyncio.Queue()
@@ -30,7 +67,7 @@ async def websocket_endpoint(websocket: WebSocket):
     gemini_client = GeminiLive(
         api_key=os.environ.get("GEMINI_API_KEY"),
         model="models/gemini-2.5-flash-native-audio-preview-12-2025",
-        input_sample_rate=16000
+        input_sample_rate=16000,
     )
 
     async def receive_from_client():
@@ -59,9 +96,19 @@ async def websocket_endpoint(websocket: WebSocket):
             print(f"Error receiving from client: {e}")
 
     receive_task = asyncio.create_task(receive_from_client())
+    user_profile = await knowledge.get_user_bkt_context(user_id)
+    aiPrompt = f"""
+        {user_profile}
+
+        you are fun teacher.
+        Ask the user what they'd like to lern or review based on their profile and
+        tell them what you know about them.
+
+    """
 
     async def run_session():
         async for event in gemini_client.start_session(
+            prompt=aiPrompt,
             audio_input_queue=audio_input_queue,
             video_input_queue=video_input_queue,
             text_input_queue=text_input_queue,

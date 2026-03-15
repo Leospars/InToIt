@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, MicOff } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { MediaHandler } from '../utils/live/media-handler';
+import { useAuth } from '@/context/auth-context';
 
 export function RootChat() {
   return (
@@ -14,6 +15,7 @@ export function RootChat() {
 function Chat() {
   const wsRef = useRef<WebSocket | null>(null);
   const mediaHandler = useRef(new MediaHandler());
+  const { session } = useAuth();
 
   const [isConnected, setIsConnected] = useState(false);
   const [isMicOn, setIsMicOn] = useState(false);
@@ -76,7 +78,7 @@ function Chat() {
     const wsUrl = new URL('/api/live-chat/ws', baseUrl);
     wsUrl.protocol = wsUrl.protocol === 'https:' ? 'wss:' : 'ws:';
 
-    const ws = new WebSocket(wsUrl.href);
+    const ws = new WebSocket(wsUrl.href, `token.${session?.access_token}`);
     ws.binaryType = 'arraybuffer'; // Receive binary data as ArrayBuffer
     wsRef.current = ws;
 
@@ -120,7 +122,7 @@ function Chat() {
   return (
     <div className='flex flex-col'>
       {!isConnected && (
-        <button onClick={attemptConnect}>Connect</button>
+        <Button variant="default" onClick={attemptConnect}>Connect</Button>
       )}
       <div className='flex flex-col flex-1 justify-end overflow-y-auto gap-2'>
         {userMessages.map(({ type, text }) => {
