@@ -8,6 +8,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, UploadFile, File, Form, Header, Query
 from fastapi.responses import JSONResponse, StreamingResponse
+from google import genai
 from pydantic import BaseModel
 from google import genai
 
@@ -242,6 +243,7 @@ Rules:
 - prerequisites must reference other topic_ids from THIS document only
 - difficulty_level must be one of: easy, medium, hard"""
 
+        client = genai.Client(api_key=settings.gemini_api_key)
         topics_response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=topic_prompt,
@@ -399,7 +401,7 @@ async def upload_file(
             "created_at": datetime.utcnow().isoformat(),
             "updated_at": datetime.utcnow().isoformat()
         }
-        
+
         db.table("course_files").insert(file_record).execute()
     except Exception as e:
         # If DB insert fails, try to delete the uploaded file
