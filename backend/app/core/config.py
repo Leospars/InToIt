@@ -9,7 +9,7 @@ dotenv.load_dotenv()
 
 class Settings(BaseSettings):
     environment: str = os.getenv("ENVIRONMENT", "development")
-    cors_origins: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:5173,https://intoit.app,https://*.vercel.app,https://*.onrender.com").split(",")
+    cors_origins: List[str] = os.getenv("CORS_ORIGINS", "*").split(",")
     supabase_url: str = os.getenv("SUPABASE_URL", "")
     supabase_service_key: str = os.getenv("SUPABASE_SERVICE_KEY", "")
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")

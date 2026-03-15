@@ -4,61 +4,10 @@ from fastapi import APIRouter, Query
 from google import genai
 from app.core.config import settings
 from app.models.requests import QuizRequest, FlashcardsRequest, ExplainRequest
+from app.api.routes.knowledge import get_user_bkt_context
 
 router = APIRouter()
 
-
-def build_user_context(user_id: Optional[str] = None) -> str:
-    """Build user learning profile context for Gemini prompts."""
-    if not user_id:
-        return ""
-    
-    # Placeholder structure for now
-    context = """
-[USER LEARNING PROFILE]
-────────────────────────────────────────────────────────────
-
-Skill Mastery (Bayesian estimate):
-  ✅ Mastered  (p ≥ 0.85):
-      - Binary Math         (p=0.91, 18 attempts)
-      - Logic Gates         (p=0.88, 12 attempts)
-      - Pointers            (p=0.87, 22 attempts)
-
-  📘 Learning  (0.50 ≤ p < 0.85):
-      - Memory Allocation   (p=0.72, 14 attempts)
-      - CPU Architecture    (p=0.61,  9 attempts)
-      - Linked Lists        (p=0.51,  7 attempts)  ← active topic
-
-  ⚠️  Struggling (p < 0.50):
-      - Recurrence Rel.     (p=0.31,  5 attempts)
-      - Trees & Graphs      (p=0.22,  3 attempts)
-
-  ○  Not yet started:
-      - Dynamic Programming, Sorting Algorithms, OS Scheduling
-
-────────────────────────────────────────────────────────────
-
-Common Misconceptions (from recent wrong answers):
-  - Linked Lists:   "Confuses pointer assignment with memory deallocation; treats *ptr=NULL as equivalent to free(ptr)."
-  - Recurrence Rel: "Incorrectly solves T(n)=2T(n/2)+n as O(n²) instead of applying Master Theorem."
-
-────────────────────────────────────────────────────────────
-
-Recommended Next Topics (prerequisites met, not yet mastered):
-  1. Linked Lists (currently learning — reinforce)
-  2. Trees & Graphs (prereqs: Pointers ✅, Memory Alloc ✅)
-  3. Recurrence Relations (prereqs: Binary Math ✅)
-
-────────────────────────────────────────────────────────────
-
-Related Topic Clusters (knowledge graph context):
-  - Pointers → Linked Lists → Trees → Graphs → Dynamic Programming
-  - Binary Math → Recurrence Relations → Dynamic Programming
-  - Logic Gates → CPU Architecture → OS Scheduling
-
-[/USER LEARNING PROFILE]
-"""
-    return context.strip()
 
 
 @router.post("/generate/quiz")
@@ -78,8 +27,8 @@ async def generate_quiz(request: QuizRequest, user_id: Optional[str] = Query(Non
     }
     """
 
-    user_context = build_user_context(user_id)
-    
+    user_context = await get_user_bkt_context(user_id, active_topic=request.topic) if user_id else ""
+
     if user_id:
         prompt = f"""{user_context}
 
@@ -120,8 +69,8 @@ async def generate_flashcards(request: FlashcardsRequest, user_id: Optional[str]
     }
     """
 
-    user_context = build_user_context(user_id)
-    
+    user_context = await get_user_bkt_context(user_id, active_topic=request.topic) if user_id else ""
+
     if user_id:
         prompt = f"""{user_context}
 
@@ -151,8 +100,8 @@ async def explain(request: ExplainRequest, user_id: Optional[str] = Query(None))
     """Generate an explanation using Gemini AI"""
     client = genai.Client(api_key=settings.gemini_api_key)
 
-    user_context = build_user_context(user_id)
-    
+    user_context = await get_user_bkt_context(user_id, active_topic=request.topic) if user_id else ""
+
     if user_id:
         prompt = f"""{user_context}
 
@@ -177,17 +126,3 @@ Instructions:
     return response.text
 
 
-# Service functions for internal use (called by other modules)
-async def generate_quiz(request: QuizRequest, user_id: Optional[str] = None) -> str:
-    """Service wrapper for generate_quiz - can be called internally"""
-    return await generate_quiz(request, user_id)
-
-
-async def generate_flashcards_service(request: FlashcardsRequest, user_id: Optional[str] = None) -> str:
-    """Service wrapper for generate_flashcards - can be called internally"""
-    return await generate_flashcards(request, user_id)
-
-
-async def explain_service(request: ExplainRequest, user_id: Optional[str] = None) -> str:
-    """Service wrapper for explain - can be called internally"""
-    return await explain(request, user_id)

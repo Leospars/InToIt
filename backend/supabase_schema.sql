@@ -337,3 +337,64 @@ create policy "Service role can insert file quizzes" on public.file_quizzes for 
 
 create index if not exists idx_file_quizzes_file_id on public.file_quizzes(file_id);
 create index if not exists idx_file_quizzes_topic_id on public.file_quizzes(topic_id);
+
+-- ═══════════════════════════════════════════════════════════
+-- BKT + Knowledge Graph Tables
+-- ═══════════════════════════════════════════════════════════
+
+-- ── BKT state — per-user mastery estimate per topic ───────
+create table if not exists public.bkt_state (
+  id             uuid primary key default uuid_generate_v4(),
+  user_id        uuid references public.profiles(id) on delete cascade not null,
+  topic_id       text not null,
+  p_know         float not null default 0.0,
+  p_transit      float not null default 0.10,
+  p_slip         float not null default 0.10,
+  p_guess        float not null default 0.20,
+  attempts       integer not null default 0,
+  mastery_level  text not null default 'untouched'
+                   check (mastery_level in ('untouched','struggling','learning','mastered')),
+  common_mistake text,
+  last_updated   timestamptz not null default now(),
+  unique(user_id, topic_id)
+);
+
+alter table public.bkt_state enable row level security;
+create policy "Own bkt state" on public.bkt_state for all using (auth.uid() = user_id);
+
+-- ── Quiz events — per-answer BKT event log ────────────────
+create table if not exists public.quiz_events (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid references public.profiles(id) on delete cascade not null,
+  topic_id      text not null,
+  question      text,
+  correct       boolean not null,
+  time_taken_ms integer,
+  p_know_before float,
+  p_know_after  float,
+  created_at    timestamptz not null default now()
+);
+
+alter table public.quiz_events enable row level security;
+create policy "Own quiz events" on public.quiz_events for all using (auth.uid() = user_id);
+
+-- ── Knowledge graph edges — prerequisite relationships ────
+create table if not exists public.kg_edges (
+  id         uuid primary key default uuid_generate_v4(),
+  from_topic text not null,
+  to_topic   text not null,
+  weight     float not null default 1.0,
+  unique(from_topic, to_topic)
+);
+
+alter table public.kg_edges enable row level security;
+create policy "Everyone can view kg edges" on public.kg_edges for select using (true);
+create policy "Authenticated users can manage kg edges" on public.kg_edges
+  for all using (auth.role() = 'authenticated');
+
+-- ── BKT / KG indexes ──────────────────────────────────────
+create index if not exists idx_bkt_state_user_id      on public.bkt_state(user_id);
+create index if not exists idx_bkt_state_mastery       on public.bkt_state(user_id, mastery_level);
+create index if not exists idx_quiz_events_user_topic  on public.quiz_events(user_id, topic_id, created_at desc);
+create index if not exists idx_kg_edges_from           on public.kg_edges(from_topic);
+create index if not exists idx_kg_edges_to             on public.kg_edges(to_topic);
