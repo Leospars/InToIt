@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 class ProgressUpdate(BaseModel):
-    concept_id: str
+    topic_id: str
     completed: bool = False
     xp_earned: int = 0
 
@@ -63,7 +63,7 @@ class CourseProgress(BaseModel):
 
 class StrugglingArea(BaseModel):
     """Areas where the user is struggling"""
-    topic: str = Field(description="Topic or concept name")
+    topic: str = Field(description="Topic name")
     category: str = Field(description="Category of the struggling area")
     difficulty_level: str = Field(description="Perceived difficulty level")
     wrong_attempts: int = Field(default=0, description="Number of wrong attempts")
@@ -126,12 +126,12 @@ async def update_profile(user_id: str, update: ProfileUpdate):
     return result.data
 
 
-@router.post("/{user_id}/concept")
-async def mark_concept(user_id: str, update: ProgressUpdate):
+@router.post("/{user_id}/topic")
+async def mark_topic(user_id: str, update: ProgressUpdate):
     db = get_supabase()
-    result = db.table("concept_progress").upsert({
+    result = db.table("topic_progress").upsert({
         "user_id": user_id,
-        "concept_id": update.concept_id,
+        "topic_id": update.topic_id,
         "completed": update.completed,
         "xp_earned": update.xp_earned,
     }).execute()
@@ -177,8 +177,8 @@ async def generate_progress_report(user_id: str, request: ProgressReportRequest)
     
     profile = profile_result.data
     
-    # Get concept progress data
-    concept_result = db.table("concept_progress").select("*").eq("user_id", user_id).execute()
+    # Get topic progress data
+    topic_result = db.table("topic_progress").select("*").eq("user_id", user_id).execute()
     
     # Get quiz/answer data (you would need to create this table or adapt existing structure)
     # For now, we'll create a mock structure
@@ -193,12 +193,12 @@ async def generate_progress_report(user_id: str, request: ProgressReportRequest)
     if answer_stats.total_correct + answer_stats.total_wrong > 0:
         answer_stats.accuracy_rate = (answer_stats.total_correct / (answer_stats.total_correct + answer_stats.total_wrong)) * 100
     
-    # Build topic progress from concept progress
+    # Build topic progress from topic progress data
     topic_progress = []
-    if concept_result.data:
-        for concept in concept_result.data:
-            # Get recent wrong count for this specific topic from the list
-            topic_name = f"Concept {concept['concept_id']}"
+    if topic_result.data:
+        for topic in topic_result.data:
+            # Get recent wrong count for this specific topic from list
+            topic_name = f"Topic {topic['topic_id']}"
             recent_wrong_count = 0
             
             # Find recent wrong answers for this topic
@@ -208,16 +208,16 @@ async def generate_progress_report(user_id: str, request: ProgressReportRequest)
                     break
             
             topic_progress.append(TopicProgress(
-                topic_id=concept["concept_id"],
+                topic_id=topic["topic_id"],
                 topic_name=topic_name,
-                category="concept",
-                completed=concept.get("completed", False),
-                completion_percentage=100 if concept.get("completed") else 0,
-                time_spent_minutes=concept.get("time_spent_minutes", 0),
-                attempts=concept.get("attempts", 0),
-                best_score=concept.get("best_score", 0.0),
+                category="topic",
+                completed=topic.get("completed", False),
+                completion_percentage=100 if topic.get("completed") else 0,
+                time_spent_minutes=topic.get("time_spent_minutes", 0),
+                attempts=topic.get("attempts", 0),
+                best_score=topic.get("best_score", 0.0),
                 recent_wrong_count=recent_wrong_count,
-                difficulty_level=concept.get("difficulty_level", "medium")
+                difficulty_level=topic.get("difficulty_level", "medium")
             ))
     
     # Create struggling areas (this would typically be calculated from performance data)
@@ -232,7 +232,7 @@ async def generate_progress_report(user_id: str, request: ProgressReportRequest)
             total_attempts=answer_stats.total_correct + answer_stats.total_wrong,
             average_score=answer_stats.accuracy_rate,
             recommended_actions=[
-                "Review fundamental concepts",
+                "Review fundamental topics",
                 "Practice with easier questions first",
                 "Take a break and return later"
             ]

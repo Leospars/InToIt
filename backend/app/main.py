@@ -8,8 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.api.routes import auth, progress, search, proxy, voice, live_chat
-from app.utils.audio_utils import validate_audio_format, convert_to_pcm16, get_audio_metadata
+from app.api.routes import auth, progress, search, proxy, voice, live_chat, files
 from app.models.progress import ProgressUpdate
 from app.models.requests import QuizRequest, FlashcardsRequest, ExplainRequest
 from google import genai
@@ -42,13 +41,13 @@ app.add_middleware(
 )
 
 # ── Routes ────────────────────────────────────────────────
-app.include_router(auth.router,         prefix="/api/auth",         tags=["auth"])
-app.include_router(progress.router,     prefix="/api/progress",     tags=["progress"])
-app.include_router(search.router,       prefix="/api/search",       tags=["search"])
-app.include_router(proxy.router,        prefix="/api/proxy",        tags=["proxy"])
-app.include_router(voice.router,        prefix="/api/voice",        tags=["voice"])
-app.include_router(live_chat.router,    prefix="/api/live-chat",    tags=["live-chat"])
-
+app.include_router(auth.router,     prefix="/api/auth",     tags=["auth"])
+app.include_router(progress.router, prefix="/api/progress", tags=["progress"])
+app.include_router(search.router,   prefix="/api/search",   tags=["search"])
+app.include_router(proxy.router,    prefix="/api/proxy",    tags=["proxy"])
+app.include_router(voice.router,    prefix="/api/voice",    tags=["voice"])
+app.include_router(live_chat.router, prefix="/api", tags=["live-chat"])
+app.include_router(files.router, prefix="/api/files", tags=["files"])
 
 @app.get("/api/health")
 async def health():
