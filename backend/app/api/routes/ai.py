@@ -1,0 +1,193 @@
+"""app/api/routes/ai.py — AI generation endpoints"""
+from typing import Optional
+from fastapi import APIRouter, Query
+from google import genai
+from app.core.config import settings
+from app.models.requests import QuizRequest, FlashcardsRequest, ExplainRequest
+
+router = APIRouter()
+
+
+def build_user_context(user_id: Optional[str] = None) -> str:
+    """Build user learning profile context for Gemini prompts."""
+    if not user_id:
+        return ""
+    
+    # Placeholder structure for now
+    context = """
+[USER LEARNING PROFILE]
+────────────────────────────────────────────────────────────
+
+Skill Mastery (Bayesian estimate):
+  ✅ Mastered  (p ≥ 0.85):
+      - Binary Math         (p=0.91, 18 attempts)
+      - Logic Gates         (p=0.88, 12 attempts)
+      - Pointers            (p=0.87, 22 attempts)
+
+  📘 Learning  (0.50 ≤ p < 0.85):
+      - Memory Allocation   (p=0.72, 14 attempts)
+      - CPU Architecture    (p=0.61,  9 attempts)
+      - Linked Lists        (p=0.51,  7 attempts)  ← active topic
+
+  ⚠️  Struggling (p < 0.50):
+      - Recurrence Rel.     (p=0.31,  5 attempts)
+      - Trees & Graphs      (p=0.22,  3 attempts)
+
+  ○  Not yet started:
+      - Dynamic Programming, Sorting Algorithms, OS Scheduling
+
+────────────────────────────────────────────────────────────
+
+Common Misconceptions (from recent wrong answers):
+  - Linked Lists:   "Confuses pointer assignment with memory deallocation; treats *ptr=NULL as equivalent to free(ptr)."
+  - Recurrence Rel: "Incorrectly solves T(n)=2T(n/2)+n as O(n²) instead of applying Master Theorem."
+
+────────────────────────────────────────────────────────────
+
+Recommended Next Topics (prerequisites met, not yet mastered):
+  1. Linked Lists (currently learning — reinforce)
+  2. Trees & Graphs (prereqs: Pointers ✅, Memory Alloc ✅)
+  3. Recurrence Relations (prereqs: Binary Math ✅)
+
+────────────────────────────────────────────────────────────
+
+Related Topic Clusters (knowledge graph context):
+  - Pointers → Linked Lists → Trees → Graphs → Dynamic Programming
+  - Binary Math → Recurrence Relations → Dynamic Programming
+  - Logic Gates → CPU Architecture → OS Scheduling
+
+[/USER LEARNING PROFILE]
+"""
+    return context.strip()
+
+
+@router.post("/generate/quiz")
+async def generate_quiz(request: QuizRequest, user_id: Optional[str] = Query(None)):
+    """Generate a quiz using Gemini AI"""
+    client = genai.Client(api_key=settings.gemini_api_key)
+    
+    quiz_format = """
+    {
+        "quiz": [
+            {
+                "question": "",
+                "options": [..., ...],
+                "correct_answer": ""
+            }
+        ]
+    }
+    """
+
+    user_context = build_user_context(user_id)
+    
+    if user_id:
+        prompt = f"""{user_context}
+
+Now generate a {request.difficulty} quiz on "{request.topic}" with {request.num_questions} questions.
+
+Instructions:
+- Target questions toward the student's STRUGGLING sub-areas listed above.
+- Avoid questions already well-covered by mastered topics (don't re-test what they know).
+- One question should specifically probe the listed common misconception for this topic.
+- Vary question types: 1 recall, 2 application, 1 analysis, 1 misconception trap.
+
+Format: {quiz_format}"""
+    else:
+        prompt = f"Generate a {request.difficulty} difficulty quiz about {request.topic} with {request.num_questions} questions. Follow this JSON format: {quiz_format}"
+    
+    response = client.models.generate_content(
+        model="gemini-3-flash-preview",
+        contents=prompt,
+        config={"response_mime_type": "application/json"}
+    )
+
+    return response.text
+
+
+@router.post("/generate/flashcards")
+async def generate_flashcards(request: FlashcardsRequest, user_id: Optional[str] = Query(None)):
+    """Generate flashcards using Gemini AI"""
+    client = genai.Client(api_key=settings.gemini_api_key)
+
+    flashcards_format = """
+    {
+        "flashcards": [
+            {
+                "front": "What is the capital of France?",
+                "back": "Paris"
+            }
+        ]
+    }
+    """
+
+    user_context = build_user_context(user_id)
+    
+    if user_id:
+        prompt = f"""{user_context}
+
+Now generate {request.num_cards} flashcards about "{request.topic}".
+
+Instructions:
+- Focus on concepts the student is currently learning or struggling with.
+- Include cards that address their common misconceptions.
+- Use analogies from topics they have already mastered.
+- Avoid concepts they have already mastered unless for reinforcement.
+
+Format as JSON: {flashcards_format}"""
+    else:
+        prompt = f"Generate {request.num_cards} flashcards about {request.topic}. Format as JSON: {flashcards_format}"
+    
+    response = client.models.generate_content(
+        model="gemini-3-flash-preview",
+        contents=prompt,
+        config={"response_mime_type": "application/json"},
+    )
+
+    return response.text
+
+
+@router.post("/explain")
+async def explain(request: ExplainRequest, user_id: Optional[str] = Query(None)):
+    """Generate an explanation using Gemini AI"""
+    client = genai.Client(api_key=settings.gemini_api_key)
+
+    user_context = build_user_context(user_id)
+    
+    if user_id:
+        prompt = f"""{user_context}
+
+Explain "{request.topic}" to this student.
+
+Instructions:
+- They have already mastered: [mastered list]. Build on these — use them as analogies.
+- They are currently learning: [learning list]. Connect to those if relevant.
+- Address this specific misconception directly: "{{common_mistake for topic}}".
+- Go slower on: {{struggling topics}}. Use concrete examples and visual metaphors.
+- Do NOT over-explain concepts they have already mastered.
+- End with a 2-question comprehension check targeting their weak area.
+- Explain in a {request.difficulty} way. Use clear steps and analogies."""
+    else:
+        prompt = f"Explain {request.topic} in a {request.difficulty} way. Use clear steps and analogies."
+    
+    response = client.models.generate_content(
+        model="gemini-3-flash-preview",
+        contents=prompt,
+    )
+
+    return response.text
+
+
+# Service functions for internal use (called by other modules)
+async def generate_quiz(request: QuizRequest, user_id: Optional[str] = None) -> str:
+    """Service wrapper for generate_quiz - can be called internally"""
+    return await generate_quiz(request, user_id)
+
+
+async def generate_flashcards_service(request: FlashcardsRequest, user_id: Optional[str] = None) -> str:
+    """Service wrapper for generate_flashcards - can be called internally"""
+    return await generate_flashcards(request, user_id)
+
+
+async def explain_service(request: ExplainRequest, user_id: Optional[str] = None) -> str:
+    """Service wrapper for explain - can be called internally"""
+    return await explain(request, user_id)

@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from app.db.supabase import get_supabase
 from app.core.config import settings
-from app.main import generate_quiz
+from app.api.routes.ai import generate_quiz
 from app.models.requests import QuizRequest
 
 logger = logging.getLogger(__name__)
@@ -261,8 +261,8 @@ Rules:
                     num_questions=num_quizzes
                 )
                 
-                # Pass profile_data as user_id to generate_quiz (it expects user_id for context)
-                quiz_response_text = await generate_quiz(quiz_request, user_id=user_id)
+                # Pass profile_data as user_id to generate_quiz_service (it expects user_id for context)
+                quiz_response_text = await generate_quiz(quiz_request, user_id)
                 quiz_data = json.loads(quiz_response_text)
 
                 db.table("file_quizzes").insert({
